@@ -1,0 +1,164 @@
+{
+  "newTabPosition" : {
+    "message" : "Position of a new tab"
+  },
+  "newTabPosition_0" : {
+    "message" : "Default"
+  },
+  "newTabPosition_1" : {
+    "message" : "First"
+  },
+  "newTabPosition_2" : {
+    "message" : "Next left"
+  },
+  "newTabPosition_3" : {
+    "message" : "Next right"
+  },
+  "newTabPosition_4" : {
+    "message" : "Last"
+  },
+  "newTabActivate" : {
+    "message" : "Open a new tab in"
+  },
+  "newTabActivate_0" : {
+    "message" : "Default"
+  },
+  "newTabActivate_1" : {
+    "message" : "Foreground"
+  },
+  "newTabActivate_2" : {
+    "message" : "Background"
+  },
+  "afterClose" : {
+    "message" : "After closing open"
+  },
+  "afterClose_0" : {
+    "message" : "Default"
+  },
+  "afterClose_1" : {
+    "message" : "Last used tab"
+  },
+  "afterClose_2" : {
+    "message" : "Left"
+  },
+  "afterClose_3" : {
+    "message" : "Right"
+  },
+  "iconAction" : {
+    "message" : "Toolbar button action"
+  },
+  "iconAction_desc" : {
+    "message" : ""
+  },
+  "iconAction_0" : {
+    "message" : "Default"
+  },
+  "iconAction_0_desc" : {
+    "message" : "Open default menu"
+  },
+  "iconAction_1" : {
+    "message" : "Restore last closed tab"
+  },
+  "iconAction_1_badge" : {
+    "message" : "R"
+  },
+  "iconAction_2" : {
+    "message" : "Toogle mark"
+  },
+  "iconAction_2_desc" : {
+    "message" : "Unmarked tabs will be skipped from being switched to after closing a tab"
+  },
+  "iconAction_2_badge" : {
+    "message" : "M"
+  },
+  "iconAction_2_Y" : {
+    "message" : "Switch to this tab after closing another tab"
+  },
+  "iconAction_2_N" : {
+    "message" : "Don't switch to this tab after closing another tab"
+  },
+  "iconAction_3" : {
+    "message" : "Freeze tab"
+  },
+  "iconAction_3_desc" : {
+    "message" : "Lock tab. Don't allow change url"
+  },
+  "iconAction_3_badge" : {
+    "message" : "F"
+  },
+  "iconAction_4" : {
+    "message" : "Protect tab"
+  },
+  "iconAction_4_desc" : {
+    "message" : "Don't allow close the tab"
+  },
+  "iconAction_4_badge" : {
+    "message" : "P"
+  },
+  "iconAction_5" : {
+    "message" : "Show list of closed tabs"
+  },
+  "iconAction_5_badge" : {
+    "message" : "L"
+  },
+  "contextMenu" : {
+    "message" : "Context menu"
+  },
+  "contextMenu_0" : {
+    "message" : "No"
+  },
+  "contextMenu_1" : {
+    "message" : "Yes"
+  },
+  "syncSettings" : {
+    "message" : "Sync settings"
+  },
+  "syncSettings_desc" : {
+    "message" : "Sync settings between browsers"
+  },
+  "syncSettings_0" : {
+    "message" : "No"
+  },
+  "syncSettings_1" : {
+    "message" : "Yes"
+  },
+  "contextMenu_lastUsed": {
+    "message" : "Switch to last used TAB"
+  },
+  "contextMenu_closedTabs": {
+    "message" : "Recently closed tabs"
+  },
+  "contextMenu_copy": {
+    "message" : "Copy URL"
+  },
+  "settings": {
+    "message" : "Settings"
+  },
+  "options": {
+    "message" : "Options"
+  },
+  "restore": {
+    "message" : "Restore"
+  },
+  "backup_file": {
+    "message" : "Backup to file"
+  },
+  "backup_data": {
+    "message" : "Settings data"
+  },
+  "restoreFile": {
+    "message" : "Restore from file"
+  },
+  "expandWindow": {
+    "message" : "Expand windows"
+  },
+  "expandWindow_0": {
+    "message" : "No"
+  },
+  "expandWindow_1": {
+    "message" : "Yes"
+  },
+  "expandWindow_desc": {
+    "message" : "Show all tabs of closed window in the \"List of closed tabs popup\""
+  }
+}

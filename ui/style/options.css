@@ -1,0 +1,249 @@
+html
+{
+  width: 97vw;
+}
+html, body
+{
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  white-space: nowrap;
+}
+body.hide
+{
+  opacity: 0;
+}
+body
+{
+  font-family: tahoma;
+  font-size: 1em;
+  opacity: 1;
+  transition: opacity 0.3s;
+  user-select: none;
+}
+
+#header
+{
+  height: 2em;
+  vertical-align: middle;
+  position: relative;
+  font-weight: bold;
+  line-height: 2em;
+  background-color: Gainsboro;
+  border: 1px solid lightgray;
+  border-bottom-color: lightgray;
+  border-radius: 0.4em 0.4em 0 0;
+  padding: 0 2em;
+  text-align: center;
+}
+
+
+#header > span:first-child
+{
+  position: absolute;
+  left: 1em;
+  line-height: 1.5em;
+}
+
+.options
+{
+  margin: 1em 2em;
+  display: flex;
+  flex-direction: column;
+  height: -webkit-fill-available;
+}
+
+.options_table
+{
+  box-shadow: 0 0 15px 4px rgba(0,0,0,0.5);
+/*  padding: 1em 3em;*/
+  border-radius: 0.4em;
+  border-spacing: 0.4em;
+  resize: both;
+  overflow: hidden;
+  min-width: max-content;
+  min-height: max-content;
+  position: absolute;
+}
+
+
+.options_table.maximized
+{
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: initial;
+}
+.options_table.maximized #header
+{
+  border-radius: initial;
+}
+
+.table
+{
+/*  display: table;
+  width: fit-content;*/
+  border-collapse: collapse;
+}
+
+.group
+{
+  display: table-row-group;
+}
+
+[group] .row:not(:first-child) > :first-child
+{
+  display: block;
+  margin-left: 1em;
+}
+.row
+{
+  display: table-row;
+}
+
+.row[title] *
+{
+  cursor: help;
+}
+
+.row > *
+{
+  display: table-cell;
+}
+
+.option
+{
+  padding: 0.5em 0 0.5em 1em;
+}
+/*
+.row.checkbox > .option
+{
+  display: inline-block;
+}
+*/
+
+.hidden
+{
+  display: none;
+}
+.label
+{
+  text-align: left;
+}
+
+select
+{
+  font-family: monospace;
+  font-size: 1em;
+  width: -webkit-fill-available;
+  padding: 0.3em;
+}
+
+.default
+{
+  font-style: italic;
+  text-shadow: 1px 0px 0px #000;
+}
+option
+{
+  font-style: normal;
+}
+
+option.default
+{
+  font-weight: bold;
+  text-shadow: none;
+}
+
+.ver
+{
+  vertical-align: super;
+  font-size: 0.5em;
+}
+textarea
+{
+  height: 5em;
+  width: 100%;
+/*  display: block;*/
+  flex: auto;
+  resize: none;
+  min-height: 2em;
+  box-sizing: border-box;
+}
+
+textarea.error
+{
+  background-color: pink;
+}
+
+.disabled
+{
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+#exit
+{
+  border-radius: 0 0.4em 0 0;
+  padding: 0 1em;
+  position: absolute;
+  right: 0;
+}
+
+#exit:hover
+{
+  background-color: rgb(200, 64, 64);
+  color: white;
+}
+
+#backupRestoreBox
+{
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+#backupRestoreBox > label
+{
+  padding: 1em 0;
+}
+.options_table.resized #backupRestoreBox
+{
+  margin-bottom: 2em;
+}
+.backupRestoreControls
+{
+  margin-top: 0.5em;
+}
+
+@media (prefers-color-scheme: dark)
+{
+
+  html
+  {
+    background-color: #202124;
+    color: silver;
+  }
+  html *:not(button)
+  {
+    background-color: inherit;
+    color: inherit;
+  }
+  .options_table
+  {
+    background-color: #292A2D;
+  }
+  #header
+  {
+    background-color: #424242;
+    border-color: #222222;
+  }
+
+  textarea.error
+  {
+    background-color: #B15A5C;
+    color: black;
+  }
+}

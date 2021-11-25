@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<head>
+  <title>${app.name} ${options}</title>
+  <link rel="stylesheet" href="style/options.css"/>
+</head>
+
+<body class="hide">
+  <div id="options_window" class="options_table">
+    <div id="header">
+      <span id="title">
+        ${app.name}
+        <span class="ver">
+          v${app.version}
+        </span>
+      </span>
+      <span>
+        ${options}
+      </span>
+      <span id="exit">&#10006;</span>
+    </div>
+    <div id="options" class="options">
+      <div class="table">
+        <div class="group">
+          <div class="row">
+            <span class="label"></span>
+            <label class="option"><select></select></label>
+          </div>
+        </div>
+      </div>
+      <div id="backupRestoreBox">
+        <textarea id="backupRestore"></textarea>
+        <div class="backupRestoreControls">
+          <button id="restore">${restore}</button>
+          <button id="restoreFile">${restoreFile}</button>
+          <button id="backup">${backup_file}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="text/javascript" src="options.js"></script>
+</body>

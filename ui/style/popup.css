@@ -1,0 +1,234 @@
+body
+{
+  padding: 0;
+  margin: 0;
+}
+
+.container
+{
+  width: max-content;
+  max-width: 25em;
+}
+
+.option
+{
+  padding: 0.5em 0.5em;
+  display: grid;
+  justify-content: start;
+}
+
+.container > .option
+{
+  padding-right: 0;
+}
+
+.option:not(:last-child)
+{
+  border-bottom: 1px dotted rgba(128, 128, 128, 0.3);
+}
+.option,
+.option *
+{
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+body[contextMenu] :not(#contextMenu) *
+{
+}
+
+body:not([contextMenu]) .sub:hover,
+.item:hover,
+body:not([contextMenu]) .menu.option .title:hover,
+body:not([contextMenu]) .menu.option .title:hover ~ *:not(.sub),
+body:not([contextMenu]) .option:not(.menu):hover
+{
+  background-color: lightblue;
+  cursor: default;
+}
+.menu.option .title:hover ~ .num
+{
+  z-index: 1;
+  pointer-events: none;
+}
+
+.hidden
+{
+  visibility: hidden;;
+}
+
+.num
+{
+  grid-row-start: 1;
+  grid-row-end: 3;
+  padding-right: 0.5em;
+  min-width: 1em;
+  text-align: right;
+}
+
+.title,
+.url,
+.container
+{
+  grid-column-start: 3;
+  grid-column-end: 5;
+  grid-row-start: 1;
+}
+
+.title
+{
+  font-weight: bold;
+}
+
+.menu.option
+{
+  grid-auto-columns: auto;
+  padding: 0;
+}
+.menu.option > .num
+{
+  padding-left: 0.5em;
+  padding-top: 0.5em;
+  position: absolute;
+  z-index: 1;
+}
+
+.menu.option:not(.open)
+{
+  min-height: 1.5em;
+}
+
+.menu.option:not(.open) > .num
+{
+}
+
+.menu.option:not(.open) > .title
+{
+}
+.menu.option  > .title
+{
+  padding-left: 2.5em;
+  padding-top: 0.5em;
+  padding-right: 14em;
+  height: 2em;
+  z-index: 1;
+  width: 100%;
+}
+
+.url
+{
+  font-style: italic;
+  opacity: 0.5;
+  grid-row-start: 2;
+}
+
+.favicon
+{
+  width: 1.5em;
+  margin: 0.2em 0.5em auto 0;
+  grid-column-start: 2;
+  grid-row-start: 1;
+  grid-row-end: 3;
+}
+
+.option > .container
+{
+  grid-row-start: 2;
+  padding-left: 1em;
+  z-index: 1;
+}
+
+.sub
+{
+  grid-row-start: 1;
+  grid-column-start: 4;
+  position: absolute;
+  right: 0.5em;
+  user-select: none;
+  padding: 0.5em;
+  z-index: 2;
+}
+body:not([context]) .sub:hover
+{
+}
+.option.open > .sub > span:nth-child(2),
+.option:not(.open) > .sub > span:nth-child(1)
+{
+  display: none;
+}
+
+
+.option:not(.open) > .container,
+#templates,
+.option.menu > .favicon[src=""],
+/*.favicon[src=""],*/
+.collapsed
+{
+  display: none;
+}
+
+.option:not(.menu) > .favicon[src=""]:after
+{
+  content: "";
+  display: block;
+  border: 1px dotted rgba(128,128,128,0.5);
+  width: 1.3em;
+  height: 1.5em;
+}
+
+body:not([contextMenu]) > #contextMenu
+{
+  display: none;
+}
+
+#contextMenu
+{
+  position: fixed;
+  border: 1px solid rgba(128,128,128,0.5);
+  white-space: nowrap;
+  background-color: inherit;
+  box-shadow: 3px 3px 10px 1px rgba(28,28,28,1);
+  z-index: 9;
+  background-color: white;
+}
+
+.item
+{
+  padding: 0.5em 1em;
+}
+
+#copy:before
+{
+  content: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAYxJREFUeNpi/P//PwMIMDIygumKioouIFXKgBss6+joiIZxWLAo+N7e3o4huGbNGoazZ88yRMfERAK5j4CG1ADpv3ADgDbvBFLSQKyJzVqYS0GOBRqSCaTlgYbEMyGpEQLarA2kmbAZwM7OjszlBxriArR0NrIXDgGxCS6Pc3BwgOmlS5bAhESBOB7ZgO94Ao5BSlqawcHBAcx+//49mL548SJKICrjM0BHWxuMkQG6AWLIkpGRkXD28uXLcYohG8AGYwQEBIBpC0tLMN3a2gqm9Q0MwPSJ48fBajQ1NZ8jG/ASxvj8+TPD3r17wezExEQUZ8+fPx9MOzs7g6idyAa8gzE+fvzIYGJiwuDm5sYgKSnJsGvXLrA4iF9VVQXnA8EzZAM+wxhnzpxhUFNTA6c+ELh16xaYBonBAEissrJSFtkAOWSnwjQRENNANuA1jAE0mYEI8AyI/4DTOAgDk+Xi/yQAoPoW9GjUhtoMyjX7gfgbEEuC8ggQMwPxAyD+BMR3gVgYlLZAigECDABLParARr1NQwAAAABJRU5ErkJggg==");
+  padding-right: 1em;
+  vertical-align: middle;
+}
+@media (prefers-color-scheme: dark)
+{
+  .item:hover
+  {
+    background-color: #717171;
+    color: white;
+  }
+  body
+  {
+    background-color: #4A4A4A;
+    color: silver;
+  }
+  .menu.option
+  {
+    background-color: #424242;
+  }
+
+  #contextMenu,
+  body:not([contextMenu]) .sub:hover,
+  .option.highlight,
+  body:not([contextMenu]) .menu.option .title:hover,
+  body:not([contextMenu]) .menu.option .title:hover ~ *:not(.sub),
+  body:not([contextMenu]) .option:not(.menu):hover
+  {
+    background-color: #616161;
+    color: white;
+  }
+}
