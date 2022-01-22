@@ -1,3 +1,4 @@
+//jshint -W083
 (()=>
 {
 var STORAGE = chrome.storage.sync;
@@ -60,10 +61,10 @@ Object.defineProperties(prefs, {
         default: 0,
         onChange: "createContextMenu",
       },
-      syncSettings:
-      {
-        default: 1,
-      },
+      // syncSettings:
+      // {
+      //   default: 1,
+      // },
       optWin:
       {
         noSync: true,
@@ -117,7 +118,7 @@ const list = function(map)
 {
   this.data = map || new Map();
   return this;
-}
+};
 
 list.prototype = 
 {
@@ -138,7 +139,7 @@ console.log(this);
       TABS.update(tab);
   },
 
-  remove: function(tab, nocheck)
+  remove: function(tab, noCheck)
   {
     const wIds = tab.windowId === undefined ? Array.from(this.data.keys()) : [tab.windowId];
 
@@ -151,7 +152,7 @@ console.log(this);
         const r = data.get(tab.id);
         data.delete(tab.id);
         this.data.delete(wIds[i]);
-        if (nocheck || (!nocheck && data.size))
+        if (noCheck || (!noCheck && data.size))
           this.data.set(tab.windowId, data);
 
         return r;
@@ -267,7 +268,7 @@ chrome.tabs.onCreated.addListener(tab =>
 
   if (prefs.newTabPosition)
   {
-console.log(prevTab.id,prefs.newTabPosition-1,
+console.log("newTabPosition", prevTab.id,prefs.newTabPosition-1,
 [
 0,                  // first
 prevTab.index,      // next left
@@ -283,9 +284,14 @@ prevTab.index + 1,  // next right
     });
   }
 // fix for EDGE vertical tabs don't scroll to the new tab https://github.com/MicrosoftDocs/edge-developer/issues/1276
-  TABS.noChange = true;
+   TABS.noChange = true;
 console.log("noChange", "true", TABS.noChange);
-  chrome.tabs.update(prevTab.id, {active: true});
+
+//without setTimeout it scrolls page down when link opens a new tab (and AutoControl installed https://chrome.google.com/webstore/detail/autocontrol-custom-shortc/lkaihdpfpifdlgoapbfocpmekbokmcfd )
+  setTimeout(() => {
+    chrome.tabs.update(prevTab.id, {active: true});
+  }, 35);
+
   setTimeout(e =>
   {
     TABS.noChange = false;
@@ -295,11 +301,12 @@ console.log("noChange", "false", TABS.noChange);
       chrome.tabs.update(tab.id, {active: true}); // foreground
     else if (prefs.newTabActivate == 2 && !tab.url.match(/^chrome/i))
       chrome.tabs.update(prevTab.id, {active: true}); // background
-chrome.tabs.get(tab.id, (tab)=>console.log(tab))
+chrome.tabs.get(tab.id, (tab)=>console.log(tab));
 
     setIcon(tab);
 
   }, 300);
+    
 console.log("created", TABS.win(tab.windowId), prevTab, tab);
 });
 
@@ -440,7 +447,7 @@ chrome.webRequest.onBeforeRequest.addListener(
 
     //just don't navigate at all if the requested url is example.com
     if (details.url.indexOf("msn.com") != -1) {
-console.log(details.url, TABS.find(details.tabId)&&TABS.find(details.tabId).url)
+console.log(details.url, TABS.find(details.tabId)&&TABS.find(details.tabId).url);
       return {redirectUrl: 'http://google.com/gen_204'};
 
     } else {
@@ -539,7 +546,7 @@ function prefsInit(options, type)
 
       n++;
     }
-    while(d)
+    while(d);
   }
   const remove = [];
   for (let i in options)
@@ -573,21 +580,21 @@ function prefsInit(options, type)
         configurable: false,
         get()
         {
-          return this.data[i].value
+          return this.data[i].value;
         },
         set(val)
         {
-          this(i, val)
+          this(i, val);
         }
       });
-    }catch(e){};
+    }catch(e){}
   }
 
 
 
 
 console.log(JSON.stringify(prefs.data, null, 2), type);
-alert("startup prefs with sync off are overwritten by sync.");
+//alert("startup prefs with sync off are overwritten by sync.");
 
   if (type === undefined && prefs.syncSettings && STORAGE !== chrome.storage.sync)
   {
@@ -640,7 +647,7 @@ console.log(JSON.stringify(prefs.data, null, 2),save, type);
   onChange.createContextMenu();
 
 
-}; //prefsInit();
+} //prefsInit();
 
 function tabsGet(id, callback)
 {
@@ -662,7 +669,7 @@ function createContextMenu (menu, force)
 
     chrome.contextMenus.remove(menu.id);
   }
-  return createContextMenu.list[chrome.contextMenus.create(menu)] = menu;
+  return (createContextMenu.list[chrome.contextMenus.create(menu)] = menu);
 }
 createContextMenu.list = {};
 const onChange = {
@@ -681,11 +688,11 @@ const onChange = {
   {
     console.log("createContextMenu", id, newVal, oldVal, menus, force);
     if (menus === undefined)
-      menus = ["lastused", "mark", "freeze", "protect", "sep1", "options", "sep2", "list", "listAction"]
+      menus = ["lastUsed", "mark", "freeze", "protect", "sep1", "options", "sep2", "list", "listAction"];
 
     const contexts = prefs.contextMenu ? ["page", "frame", "browser_action", "page_action", "action"] : ["browser_action", "page_action", "action"],
           menuList = {
-            lastused: {
+            lastUsed: {
               title: chrome.i18n.getMessage("contextMenu_lastUsed"),
               contexts: contexts,
               onclick: (info, tab) =>
@@ -786,7 +793,7 @@ console.log(listAction);
           if (sessions.length)
           {
             menu.id = menus[m];
-            createContextMenu(menu, menu.id != "list" && force)
+            createContextMenu(menu, menu.id != "list" && force);
           }
           let i = 0,
               max = 10;
@@ -807,16 +814,16 @@ console.log(listAction);
                 {
                   chrome.sessions.restore(tabs[n].sessionId);
                 }
-              }
+              };
               if (menus[m] == "listAction")
-                details.parentId = "listAction"
+                details.parentId = "listAction";
 
 console.log(listAction, details);
               createContextMenu(details, true);
               i++;
             }
           }
-          while(i < max)
+          while(i < max);
           for (; i < max; i++)
           {
             if (createContextMenu.list["list"+i])
@@ -835,7 +842,7 @@ console.log(listAction, details);
     }
   } //createContextMenu()
 
-}
+};
 String.prototype.truncate = String.prototype.truncate ||  function (n)
 {
   return this.length > n ? this.substring(0, (n / 2) - 1) + '…' + this.substring(this.length - (n / 2) + 2, this.length) : this.toString();
@@ -862,7 +869,7 @@ console.log("browserAction", tab.skipAfterClose, found.skipAfterClose, tab === f
 console.log(sessions);
         const sessionId = sessions[0] && (sessions[0].tab && sessions[0].tab.sessionId) || (sessions[0].window && sessions[0].window.tabs[0] && sessions[0].window.tabs[0].sessionId) || null;
 console.log(sessionId);
-        chrome.sessions.restore(sessionId)
+        chrome.sessions.restore(sessionId);
       });
       break;
 
@@ -967,7 +974,7 @@ console.log(action, title, popup);
 }
 
 
-return
+return;
 
 
 
@@ -1239,4 +1246,4 @@ function lastUsedTabSelect(info, tab)
 }
 
 */
-})()
+})();

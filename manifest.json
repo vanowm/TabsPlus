@@ -1,7 +1,9 @@
 {
   "background": {
     "persistent": true,
-    "scripts": [ "background.js" ]
+    "scripts": [
+      "background.js"
+    ]
   },
   "description": "Updated version of abandoned TabPlus extension that works properly in EDGE with vertical tabs",
   "icons": {
@@ -15,17 +17,18 @@
   "manifest_version": 2,
   "name": "Tabs+",
   "options_page": "ui/options.html",
-/*
-  "options_ui": {
-    "page": "options.html",
-    "open_in_tab": false
-  },
-*/
-  "browser_action": {
-//    "default_popup": "ui/popup.html"
-  },
+  "browser_action": {},
   "default_locale": "en",
-  "permissions": [ "tabs", "contextMenus", "storage", "webRequest", "webRequestBlocking", "<all_urls>", "sessions", "clipboardWrite"],
+  "permissions": [
+    "tabs",
+    "contextMenus",
+    "storage",
+    "webRequest",
+    "webRequestBlocking",
+    "<all_urls>",
+    "sessions",
+    "clipboardWrite"
+  ],
   "update_url": "https://edge.microsoft.com/extensionwebstorebase/v1/crx",
-  "version": "0.0.1"
+  "version": "0.0.3"
 }
