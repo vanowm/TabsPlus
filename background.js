@@ -2,7 +2,6 @@
 (()=>
 {
 var STORAGE = chrome.storage.sync;
-
 const app = chrome.app.getDetails();
 const prefs = function(name, value)
 {
@@ -49,7 +48,8 @@ Object.defineProperties(prefs, {
       {
         default: 0,
         onChange: "iconActionChanged",
-        group: "iconAction"
+        group: "iconAction",
+        valid: [0,ACTION_UNDO, ACTION_MARK, ACTION_LIST]
       },
       expandWindow:
       {
@@ -441,25 +441,25 @@ chrome.tabGroups.onUpdated(tabGroup =>
 
 
 
-chrome.webRequest.onBeforeRequest.addListener(
+// chrome.webRequest.onBeforeRequest.addListener(
 
-  function(details) {
+//   function(details) {
 
-    //just don't navigate at all if the requested url is example.com
-    if (details.url.indexOf("msn.com") != -1) {
-console.log(details.url, TABS.find(details.tabId)&&TABS.find(details.tabId).url);
-      return {redirectUrl: 'http://google.com/gen_204'};
+//     //just don't navigate at all if the requested url is example.com
+//     if (details.url.indexOf("msn.com") != -1) {
+// console.log(details.url, TABS.find(details.tabId)&&TABS.find(details.tabId).url);
+//       return {redirectUrl: 'http://google.com/gen_204'};
 
-    } else {
+//     } else {
 
-      return { cancel: false };
+//       return { cancel: false };
 
-    }
+//     }
 
-  },
-    { urls: ["<all_urls>"] },
-    ["blocking"]
-  );
+//   },
+//     { urls: ["<all_urls>"] },
+//     ["blocking"]
+// );
 
 
 
@@ -525,7 +525,9 @@ function prefsInit(options, type)
   {
 
     let d = chrome.i18n.getMessage(i),
-        n = 0;
+        n = 0,
+        valid = prefs.data[i].valid || [];
+
     if (d)
       prefs.data[i].label = d;
     
@@ -533,20 +535,32 @@ function prefsInit(options, type)
     if (d)
       prefs.data[i].description = d;
 
-    do
+    if (!valid.length)
     {
-      d = chrome.i18n.getMessage(i + "_" + n);
-      if (d)
+      do
       {
-        if (!prefs.data[i].options)
-          prefs.data[i].options = [];
+          d = chrome.i18n.getMessage(i + "_" + n);
+          if (d)
+          {
+            valid[valid.length] = n;
+          }
 
-        prefs.data[i].options[n] = {name: d, description: chrome.i18n.getMessage(i + "_" + n + "_desc")};
+        n++;
       }
-
-      n++;
+      while(d);
     }
-    while(d);
+    for(let n = 0; n < valid.length; n++)
+    {
+
+      d = chrome.i18n.getMessage(i + "_" + n);
+      if (!d)
+        continue;
+
+      if (!prefs.data[i].options)
+        prefs.data[i].options = [];
+
+      prefs.data[i].options[n] = {name: d, description: chrome.i18n.getMessage(i + "_" + n + "_desc")};
+    }
   }
   const remove = [];
   for (let i in options)
@@ -688,7 +702,7 @@ const onChange = {
   {
     console.log("createContextMenu", id, newVal, oldVal, menus, force);
     if (menus === undefined)
-      menus = ["lastUsed", "mark", "freeze", "protect", "sep1", "options", "sep2", "list", "listAction"];
+      menus = ["lastUsed", "mark", /*"freeze", "protect",*/ "sep1", "options", "sep2", "list", "listAction"];
 
     const contexts = prefs.contextMenu ? ["page", "frame", "browser_action", "page_action", "action"] : ["browser_action", "page_action", "action"],
           menuList = {
@@ -705,54 +719,44 @@ const onChange = {
               }
             },
             undo: {
-              title: chrome.i18n.getMessage("iconAction_1"),
+              title: chrome.i18n.getMessage("iconAction_" + ACTION_UNDO),
               contexts: contexts,
               onclick: (info, tab) =>
               {
-                browserAction(tab, 2);
+                browserAction(tab, ACTION_UNDO);
               }
             },
             mark: {
-              title: chrome.i18n.getMessage("iconAction_2"),
+              title: chrome.i18n.getMessage("iconAction_" + ACTION_MARK),
               contexts: contexts,
               onclick: (info, tab) =>
               {
-                browserAction(tab, 1);
+                browserAction(tab, ACTION_MARK);
               }
             },
             freeze: {
-              title: chrome.i18n.getMessage("iconAction_3"),
+              title: chrome.i18n.getMessage("iconAction_" + ACTION_FREEZE),
               contexts: contexts,
               onclick: (info, tab) =>
               {
-                browserAction(tab, 3);
+                browserAction(tab, ACTION_FREEZE);
               }
             },
             protect: {
-              title: chrome.i18n.getMessage("iconAction_4"),
+              title: chrome.i18n.getMessage("iconAction_" + ACTION_PROTECT),
               contexts: contexts,
               onclick: (info, tab) =>
               {
-                browserAction(tab, 4);
+                browserAction(tab, ACTION_PROTECT);
               }
             },
-      /*
-            list: {
-              title: chrome.i18n.getMessage("iconAction_3"),
-              contexts: ["all"],
-              onclick: (info, tab) =>
-              {
-                browserAction(tab, 3);
-              }
-            },
-      */
             list: {
               title: "----- [ " + chrome.i18n.getMessage("contextMenu_closedTabs") + " ] -----",
               contexts: ["page", "frame"],
               enabled: false,
               onclick: (info, tab) =>
               {
-                browserAction(tab, 5);
+                browserAction(tab, ACTION_LIST);
               }
             },
             listAction: {
@@ -860,10 +864,10 @@ function browserAction(tab, iconAction)
     iconAction = prefs.iconAction;
 
   const found = TABS.find(tab.id, tab.windowId) || tab;
-console.log("browserAction", tab.skipAfterClose, found.skipAfterClose, tab === found, tab, found);
+console.log("browserAction", iconAction, tab.skipAfterClose, found.skipAfterClose, tab === found, tab, found);
   switch (iconAction)
   {
-    case 1:
+    case ACTION_UNDO:
       chrome.sessions.getRecentlyClosed(sessions => 
       {
 console.log(sessions);
@@ -873,22 +877,22 @@ console.log(sessionId);
       });
       break;
 
-    case 2:
+    case ACTION_MARK:
       found.skipAfterClose = !found.skipAfterClose;
       setIcon(found);
       break;
 
-    case 3:
+    case ACTION_FREEZE:
       found.freeze = !found.freeze;
       setIcon(found);
       break;
  
-    case 4:
+    case ACTION_PROTECT:
       found.protect = !found.protect;
       setIcon(found);
       break;
 
-    case 5:
+    case ACTION_LIST:
       const winOptions = {
         url: "ui/popup.html",
         type: "panel",
@@ -926,22 +930,22 @@ function setIcon(tab)
       color = '',//window.matchMedia('(prefers-color-scheme: dark)').matches ? "#393939" : "",
       pinned = TABS.find(tab.id, tab.windowId) || tab,
       prop = ["skipAfterClose", "freeze", "protect"][prefs.iconAction-2],
-      badge = (prefs.iconAction == 2 ? pinned[prop] : !pinned[prop]) ? " ❌ " : " 🟢 ";
+      badge = (prefs.iconAction == ACTION_MARK ? pinned[prop] : !pinned[prop]) ? " ❌ " : " 🟢 ";
 
   if (prefs.iconAction)
     badge = badge.replace(/ /g, '') + chrome.i18n.getMessage("iconAction_"+prefs.iconAction+"_badge");
 
-  if (prefs.iconAction == 2)
+  if (prefs.iconAction == ACTION_MARK)
   {
 console.log("setIcon", pinned.skipAfterClose ? 1 : 0, tab.skipAfterClose, pinned.skipAfterClose, tab === pinned, tab, pinned);
-    title += "\n" + chrome.i18n.getMessage("iconAction_2_" + (pinned.skipAfterClose ? "N" : "Y"));
+    title += "\n" + chrome.i18n.getMessage("iconAction_" + ACTION_MARK + "_" + (pinned.skipAfterClose ? "N" : "Y"));
 //    icon += (pinned.skipAfterClose ? "un" : "") + "checked_";
   }
   else if (prefs.iconAction)
   {
     title += "\n" + chrome.i18n.getMessage("iconAction_" + prefs.iconAction);
   }
-  if (prefs.iconAction == 5)
+  if (prefs.iconAction == ACTION_LIST)
   {
     popup = "ui/popup.html";
   }

@@ -1,3 +1,4 @@
+/*jshint esversion: 8, -W083,-W014 */
 const $ = id => document.getElementById(id),
       app = chrome.app.getDetails(),
       _ = chrome.i18n.getMessage;
@@ -10,7 +11,7 @@ const $ = id => document.getElementById(id),
         undefined: new Proxy(
         {},
         {
-          get(obj, name) {return Object.hasOwnProperty.call(obj, name) ? obj[name] : _(name)},
+          get(obj, name) {return Object.hasOwnProperty.call(obj, name) ? obj[name] : _(name);},
         })
       },
       i18n = (a,b,c,d) => tags[c][d];
@@ -32,13 +33,13 @@ const $ = id => document.getElementById(id),
 chrome.runtime.sendMessage(null, {type: "prefs"}, prefs =>
 {
   const elOpt = document.querySelector("#options > .table"),
-        templ = elOpt.removeChild(elOpt.firstElementChild),
+        template = elOpt.removeChild(elOpt.firstElementChild),
         elRestore = $("restore"),
         elRestoreFile = $("restoreFile"),
         elBackup = $("backup"),
         elHeader = $("header"),
         elOptWin = $("options_window"),
-        elBackupRestore = $("backupRestore")
+        elBackupRestore = $("backupRestore"),
         elOptions = $("options"),
         elExit = $("exit"),
         rectExit = elExit.getBoundingClientRect();
@@ -50,8 +51,8 @@ console.log(prefs);
     if (!prefs[o].options)
       continue;
 
-    const group = (prefs[o].group && elOpt.querySelector('[group="' + prefs[o].group + '"]')) || templ.cloneNode(false);
-    const row = templ.querySelector(".row").cloneNode(true);
+    const group = (prefs[o].group && elOpt.querySelector('[group="' + prefs[o].group + '"]')) || template.cloneNode(false);
+    const row = template.querySelector(".row").cloneNode(true);
     group.appendChild(row);
 
     if (prefs[o].group)
@@ -128,7 +129,7 @@ console.log(prefs);
     {
       data = JSON.parse(value);
     }
-    catch (e)
+    catch (er)
     {
       err = true;
     }
@@ -140,7 +141,7 @@ console.log(prefs);
       if (i in data && o[i] !== data[i])
       {
         changed = true;
-        break
+        break;
       }
     }
     e.target.classList.toggle("error", value !== "" && err);
@@ -155,7 +156,7 @@ console.log(prefs);
     {
       data = JSON.parse(elBackupRestore.value.trim());
     }
-    catch (e){}
+    catch (er){}
     console.log(restore(data));
     backupRestore();
   });
@@ -177,7 +178,7 @@ console.log(prefs);
     {
       [fileHandle] = await window.showOpenFilePicker(opts);
     }
-    catch(e){return};
+    catch(er){return;}
     file = await fileHandle.getFile(),
     contents = await file.text();
 
@@ -186,7 +187,7 @@ console.log(prefs);
     {
       data = JSON.parse(contents);
     }
-    catch (e){}
+    catch (er){}
     console.log(restore(data));
     backupRestore();
   });
@@ -219,7 +220,7 @@ console.log(prefs);
     {
       fileHandle = await window.showSaveFilePicker(options);
     }
-    catch(e){return};
+    catch(er){return;}
 
     // Create a FileSystemWritableFileStream to write to.
     const writable = await fileHandle.createWritable();
@@ -257,7 +258,7 @@ console.log(prefs);
   {
     const value = ~~(e.target.type == "checkbox" ? e.target.checked : e.target.value);
     e.target.classList.toggle("default", value == prefs[e.target.id].default);
-    prefs[e.target.id].value = value
+    prefs[e.target.id].value = value;
     let o = {};
     o[e.target.id] = value;
     if (onChange[prefs[e.target.id].onChange] instanceof Function)
@@ -287,7 +288,7 @@ console.log(prefs);
 
   function enableDisable()
   {
-    prefs.expandWindow.input.disabled = prefs.iconAction.value != 5;
+    prefs.expandWindow.input.disabled = prefs.iconAction.value != ACTION_LIST;
     prefs.expandWindow.input.closest(".row").classList.toggle("hidden", prefs.expandWindow.input.disabled);
   }
 
@@ -429,7 +430,7 @@ console.log(prefs);
       !function loop(e)
       {
         if (!savePos.timer)
-          savePos.timer = setInterval(loop, 10)
+          savePos.timer = setInterval(loop, 10);
 
         if (savePos.optWin === prefs.optWin.value)
         {
@@ -506,7 +507,7 @@ console.log(prefs);
     switch (request.type)
     {
       case "prefChanged":
-        setOption(request.name, request.newValue, false)
+        setOption(request.name, request.newValue, false);
         break;
     }
   });

@@ -63,7 +63,7 @@
     "message" : "R"
   },
   "iconAction_2" : {
-    "message" : "Toogle mark"
+    "message" : "Toggle mark"
   },
   "iconAction_2_desc" : {
     "message" : "Unmarked tabs will be skipped from being switched to after closing a tab"
@@ -78,28 +78,28 @@
     "message" : "Don't switch to this tab after closing another tab"
   },
   "iconAction_3" : {
-    "message" : "Freeze tab"
-  },
-  "iconAction_3_desc" : {
-    "message" : "Lock tab. Don't allow change url"
-  },
-  "iconAction_3_badge" : {
-    "message" : "F"
-  },
-  "iconAction_4" : {
-    "message" : "Protect tab"
-  },
-  "iconAction_4_desc" : {
-    "message" : "Don't allow close the tab"
-  },
-  "iconAction_4_badge" : {
-    "message" : "P"
-  },
-  "iconAction_5" : {
     "message" : "Show list of closed tabs"
   },
-  "iconAction_5_badge" : {
+  "iconAction_3_badge" : {
     "message" : "L"
+  },
+  "iconAction_4" : {
+    "message" : "Freeze tab"
+  },
+  "iconAction_4_desc" : {
+    "message" : "Lock tab. Don't allow change url"
+  },
+  "iconAction_4_badge" : {
+    "message" : "F"
+  },
+  "iconAction_5" : {
+    "message" : "Protect tab"
+  },
+  "iconAction_5_desc" : {
+    "message" : "Don't allow close the tab"
+  },
+  "iconAction_5_badge" : {
+    "message" : "P"
   },
   "contextMenu" : {
     "message" : "Context menu"
