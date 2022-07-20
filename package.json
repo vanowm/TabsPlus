@@ -1,0 +1,10 @@
+{
+	"jshintConfig":
+	{
+		"esversion": 8,
+    "loopfunc": true,
+    "-W014": true,
+		"-W083": true
+	}
+
+}

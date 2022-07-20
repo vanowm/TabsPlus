@@ -1,4 +1,3 @@
-TabsPlus_v0.0.1.zip
-TabsPlus_v0.0.2.zip
-TabsPlus_v0.0.3.zip
-TabsPlus_v0.0.4.zip
+*.zip
+node_modules/*
+-----deleteme-----/*

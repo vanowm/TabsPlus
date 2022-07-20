@@ -129,7 +129,6 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, prefs =>
     if (e.target.closest("#contextMenu"))
       return contextMenuClose(e);
 
-// no default menu
     e.preventDefault();
 
     if (contextMenuOption)

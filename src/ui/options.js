@@ -1,9 +1,8 @@
-/*jshint esversion: 8, -W083,-W014 */
 const $ = id => document.getElementById(id),
-      app = chrome.app.getDetails(),
+      app = chrome.runtime.getManifest(),
       _ = chrome.i18n.getMessage;
 
-!function()
+(function()
 {
   let i18nRegExp = /\${((\w+)\.)?([^}]+)}/g,
       tags = {
@@ -16,7 +15,7 @@ const $ = id => document.getElementById(id),
       },
       i18n = (a,b,c,d) => tags[c][d];
 
-  !function loop(node)
+  (function loop(node)
   {
     if (node.attributes)
       for(let i = 0; i < node.attributes.length; i++)
@@ -27,8 +26,8 @@ const $ = id => document.getElementById(id),
     else
       for(let i = 0; i < node.childNodes.length; i++)
         loop(node.childNodes[i]);
-  }(document.body.parentNode);
-}();
+  })(document.body.parentNode);
+})();
 
 chrome.runtime.sendMessage(null, {type: "prefs"}, prefs =>
 {
@@ -99,6 +98,9 @@ console.log(prefs);
     prefs[o].input = option;
     option.addEventListener("input", onChange);
     option.id = o;
+    if (option.selectedOptions)
+      option.title = option.selectedOptions[0].textContent;
+
     if (prefs[o].description)
     {
       row.title = prefs[o].description;
@@ -179,7 +181,7 @@ console.log(prefs);
       [fileHandle] = await window.showOpenFilePicker(opts);
     }
     catch(er){return;}
-    file = await fileHandle.getFile(),
+    file = await fileHandle.getFile();
     contents = await file.text();
 
     let data = {};
@@ -256,22 +258,25 @@ console.log(prefs);
 
   function onChange(e)
   {
-    const value = ~~(e.target.type == "checkbox" ? e.target.checked : e.target.value);
-    e.target.classList.toggle("default", value == prefs[e.target.id].default);
-    prefs[e.target.id].value = value;
+    const option = e.target;
+    const value = ~~(option.type == "checkbox" ? option.checked : option.value);
+    option.classList.toggle("default", value == prefs[option.id].default);
+    prefs[option.id].value = value;
     let o = {};
-    o[e.target.id] = value;
-    if (onChange[prefs[e.target.id].onChange] instanceof Function)
-      onChange[prefs[e.target.id].onChange](e.target.id, value);
+    o[option.id] = value;
+    if (onChange[prefs[option.id].onChange] instanceof Function)
+      onChange[prefs[option.id].onChange](option.id, value);
 
 
-    switch(e.target.id)
+    switch(option.id)
     {
         case "syncSettings":
           o = Object.assign(o, getBackupData());
           break;
 
     }
+    if (option.selectedOptions)
+      option.title = option.selectedOptions[0].textContent;
 
     for(let i in o)
     {
@@ -427,7 +432,7 @@ console.log(prefs);
     {
       const time = 500;
       let i = -1;
-      !function loop(e)
+      (function loop(e)
       {
         if (!savePos.timer)
           savePos.timer = setInterval(loop, 10);
@@ -456,7 +461,7 @@ console.log(prefs);
           });
           return;
         }
-      }();
+      })();
     }
   }
 

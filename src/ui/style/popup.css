@@ -34,9 +34,11 @@ body
   overflow: hidden;
 }
 
+/* 
 body[contextMenu] :not(#contextMenu) *
 {
 }
+*/
 
 body:not([contextMenu]) .sub:hover,
 .item:hover,
@@ -99,13 +101,17 @@ body:not([contextMenu]) .option:not(.menu):hover
   min-height: 1.5em;
 }
 
+/* 
 .menu.option:not(.open) > .num
 {
 }
-
+ */
+/* 
 .menu.option:not(.open) > .title
 {
 }
+ */
+
 .menu.option  > .title
 {
   padding-left: 2.5em;
@@ -145,13 +151,17 @@ body:not([contextMenu]) .option:not(.menu):hover
   grid-column-start: 4;
   position: absolute;
   right: 0.5em;
+  -webkit-user-select: none;
   user-select: none;
   padding: 0.5em;
   z-index: 2;
 }
+/* 
 body:not([context]) .sub:hover
 {
 }
+ */
+
 .option.open > .sub > span:nth-child(2),
 .option:not(.open) > .sub > span:nth-child(1)
 {
