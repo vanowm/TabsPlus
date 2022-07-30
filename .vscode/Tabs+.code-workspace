@@ -18,14 +18,18 @@
 				"type": "msedge",
 				"request": "launch",
 				"version": "stable",
+				"sourceMaps": false,
 				"pathMapping": {
 					"/": "${workspaceFolder}/src/"
 				},
 				// "sourceMaps": true,
+      // "internalConsoleOptions": "openOnSessionStart",
 				"webRoot": "${workspaceFolder}/src/",
-				"outputCapture": "console",
+				// "outputCapture": "console",
+				"url": "edge://extensions/",
 				"runtimeArgs": [
-					"--load-extension=${workspaceFolder}/src/"
+      // "--auto-open-devtools-for-tabs ",
+			"--load-extension=${workspaceFolder}/src/"
 				]
 			},
 		],

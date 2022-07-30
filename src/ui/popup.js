@@ -15,7 +15,7 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, prefs =>
       let n = 1;
       for(let i = 0, isMenu, session, option, el, elTitle, num, favicon, title, url; i < sessions.length; i++)
       {
-  console.log(sessions[i]);
+  debug.log(sessions[i]);
         let _t = 0;
         if (sessions[i].window)
         {
@@ -70,7 +70,7 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, prefs =>
 
           if (!isMenu || (isMenu && option.querySelector(":hover") === elTitle))
           {
-  console.log("restore", session.sessionId);
+  debug.log("restore", session.sessionId);
             chrome.sessions.restore(session.sessionId);
             window.close();
           }
@@ -125,7 +125,7 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, prefs =>
   let contextMenuOption = null;
   document.documentElement.addEventListener("contextmenu", e =>
   {
-    console.log(e);
+    debug.log(e);
     if (e.target.closest("#contextMenu"))
       return contextMenuClose(e);
 
@@ -138,13 +138,13 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, prefs =>
     if (!contextMenuOption)
       return contextMenuClose();
 
-  console.log(contextMenuOption);
-  console.log(e.target.getBoundingClientRect());
+  debug.log(contextMenuOption);
+  debug.log(e.target.getBoundingClientRect());
     document.body.setAttribute("contextMenu", contextMenuOption.dataset.sessionId);
     const pos = normalizePozition(e.clientX, e.clientY);
     elContextMenu.style.left = pos.x + "px";
     elContextMenu.style.top = pos.y + "px";
-    console.log(pos, e.offsetX, e.offsetY);
+    debug.log(pos, e.offsetX, e.offsetY);
     contextMenuOption.classList.add("highlight");
     elContextMenu.focus();
   });
@@ -155,13 +155,15 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, prefs =>
       return;
 
 
-    console.log(e, contextMenuOption);
-    e && e.preventDefault();
-  console.log(e&&e.target);
-  console.log(elCopy);
+    debug.log(e, contextMenuOption);
+    if (e)
+      e.preventDefault();
+
+  debug.log(e&&e.target);
+  debug.log(elCopy);
     if (e && e.target === elCopy)
     {
-  console.log(contextMenuOption.dataset.url);
+  debug.log(contextMenuOption.dataset.url);
       navigator.clipboard.writeText(contextMenuOption.dataset.url);
   //    return;
     }
@@ -174,7 +176,7 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, prefs =>
   document.addEventListener("scroll", contextMenuClose);
   elContextMenu.addEventListener("blur", e =>
   {
-    console.log("blur", e);
+    debug.log("blur", e);
   });
 });
 

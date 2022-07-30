@@ -1,10 +1,24 @@
 {
-	"jshintConfig":
-	{
-		"esversion": 8,
-    "loopfunc": true,
-    "-W014": true,
-		"-W083": true
-	}
-
+  "name": "tabs-plus",
+  "version": "1.0.0",
+  "license": "GPL-3",
+  "webExt": {
+    "sourceDir": "src/",
+    "artifactsDir": "xpi/",
+    "build": {
+      "overwriteDest": true,
+      "asNeeded": false
+    },
+    "sign": {
+      "apiKey": "user:630411:225",
+      "apiSecret": "5449ef3b1d96dc1e33da55804278c35c644a81217e059e52b667a884c3eb7d9c"
+    }
+  },
+  "devDependencies": {
+    "web-ext": "^7.1.1"
+  },
+  "scripts": {
+    "sign": "web-ext sign",
+    "build": "web-ext build"
+  }
 }

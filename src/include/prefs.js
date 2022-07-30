@@ -1,3 +1,130 @@
+
+const prefs = function(name, value)
+{
+  if (value === undefined)
+    return prefs[name];
+
+  if (prefs[name] === undefined)
+    return;
+
+  const save = prefs[name];
+  prefs.data[name].value = value;
+  if (save !== value)
+  {
+    const o = {};
+    o[name] = value;
+    prefsSave(o, er => debug.log("prefsSave", o, er, chrome.runtime.lastError));
+  }
+  return save;
+};
+
+//options
+
+Object.defineProperties(prefs, {
+  data:
+  {
+    configurable: false,
+    enumerable: false,
+  //  writable: false,
+    value:
+    {
+      newTabPosition:
+      {
+        default: 0,
+      },
+      newTabActivate:
+      {
+        default: 0,
+      },
+      afterClose:
+      {
+        default: 0,
+      },
+      iconAction:
+      {
+        default: 0,
+        onChange: "iconActionChanged",
+        group: "iconAction",
+        valid: [0, ACTION_UNDO, ACTION_MARK, ACTION_LIST]
+      },
+      expandWindow:
+      {
+        default: 0,
+        group: "iconAction"
+      },
+      contextMenu:
+      {
+        default: 0,
+        onChange: "createContextMenu",
+      },
+      // syncSettings:
+      // {
+      //   default: 1,
+      // },
+      optWin:
+      {
+        noSync: true,
+        default: ""
+      },
+      version:
+      {
+        noSync: true,
+        default: ""
+      }
+    }
+  }
+});
+
+
+function prefsOnChanged(changes, area)
+{
+debug.log("prefsOnChanged", arguments);
+  if (area == "sync" && STORAGE !== chrome.storage.sync)
+    return;
+
+  for (let o in changes)
+  {
+    if (!prefs.data[o])
+      continue;
+
+    if (onChange[prefs.data[o].onChange] instanceof Function)
+      onChange[prefs.data[o].onChange](o, changes[o].newValue, changes[o].oldValue);
+
+    chrome.runtime.sendMessage(null,
+    {
+      type: "prefChanged",
+      name: o,
+      newValue: changes[o].newValue,
+      oldValue: changes[o].oldValue
+    }, resp => debug.log(o, resp, chrome.runtime.lastError));
+  }
+}
+
+function prefsSave(o, callback)
+{
+debug.log(STORAGE === chrome.storage.local, o);
+  if (STORAGE === chrome.storage.local)
+    return STORAGE.set(o, callback);
+
+  const local = {},
+        sync = {};
+
+  for(let i in o)
+  {
+    if (prefs.data[i].noSync || i == "syncSettings")
+      local[i] = o[i];
+    else
+      sync[i] = o[i];
+  }
+debug.log("local", local);
+debug.log("sync", sync);
+  if (Object.keys(local).length)
+    chrome.storage.local.set(local, callback);
+
+  if (Object.keys(sync).length)
+    chrome.storage.sync.set(sync, callback);
+}
+
 function prefsInit(options, type)
 {
   const save = {};
@@ -88,22 +215,22 @@ function prefsInit(options, type)
 
 
 
-console.log(JSON.stringify(prefs.data, null, 2), type);
+debug.log(JSON.stringify(prefs.data, null, 2), type);
 //alert("startup prefs with sync off are overwritten by sync.");
 
   if (type === undefined && prefs.syncSettings && STORAGE !== chrome.storage.sync)
   {
     STORAGE = chrome.storage.sync;
-    chrome.storage.local.set({syncSettings: 1}, res=>res&&console.log(res));
+    chrome.storage.local.set({syncSettings: 1}, res=>res&&debug.log(res));
     return STORAGE.get(null, e => prefsInit(e, "sync"));
   }
   else if (type === undefined && !prefs.syncSettings && STORAGE !== chrome.storage.local)
   {
-    chrome.storage.local.set({syncSettings: 0}, res=>res&&console.log(res));
+    chrome.storage.local.set({syncSettings: 0}, res=>res&&debug.log(res));
     STORAGE = chrome.storage.local;
     return STORAGE.get(null, e => prefsInit(e, "local"));
   }
-console.log(type, local, options);
+debug.log(type, local, options);
 
   if (local.length)
   {
@@ -115,9 +242,9 @@ console.log(type, local, options);
     save.version = app.version;
   }
 
-console.log(JSON.stringify(prefs.data, null, 2),save, type);
+debug.log(JSON.stringify(prefs.data, null, 2),save, type);
   if (Object.keys(save).length)
-    prefsSave(save, er => console.log("init prefs", save, er));
+    prefsSave(save, er => debug.log("init prefs", save, er));
 
   chrome.tabs.query({}, list =>
   {
@@ -140,6 +267,9 @@ console.log(JSON.stringify(prefs.data, null, 2),save, type);
   });
   // context menu
   onChange.createContextMenu();
-
-
 } //prefsInit();
+
+STORAGE.get(null, prefsInit);
+
+// storage change listener
+chrome.storage.onChanged.addListener( prefsOnChanged );

@@ -14,7 +14,14 @@
       "16" : "ui/icons/icon_16.png"
    },
    "options_page" : "ui/options.html",
-   "action" : {},
+   "action" : {
+      "default_icon":
+      {
+         "32" : "ui/icons/action_32.png",
+         "24" : "ui/icons/action_24.png",
+         "16" : "ui/icons/action_16.png"
+      }
+   },
    "default_locale" : "en",
    "permissions" : [
       "tabs",
@@ -22,9 +29,7 @@
       "storage",
       "webRequest",
       "sessions",
-      "clipboardWrite",
-      ""
+      "clipboardWrite"
    ],
-   "update_url" : "https://edge.microsoft.com/extensionwebstorebase/v1/crx",
-   "version" : "0.1.0"
+   "version" : "0.1.1"
 }
