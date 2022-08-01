@@ -3,8 +3,6 @@
 // } catch (e) {
 //   console.error(e);
 // }
-let STORAGE = chrome.storage.sync;
-
 const app = chrome.runtime.getManifest();
 
 importScripts("include/common.js");

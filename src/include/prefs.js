@@ -1,4 +1,4 @@
-
+let STORAGE = chrome.storage.sync;
 const prefs = function(name, value)
 {
   if (value === undefined)
