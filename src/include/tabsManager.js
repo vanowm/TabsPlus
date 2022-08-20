@@ -8,17 +8,26 @@ class TabsManager
 
   add(tab)
   {
-debug.log(this);
-    let data = this.data.get(tab.windowId);
-    if (!data)
+    const that = this;
+    const callback = (tab) =>
     {
-      data = new Map();
-      this.data.set(tab.windowId, data);
-    }
-    const _tab = this.remove(tab, true); //move tab to the end of the list
-    data.set(tab.id, _tab || tab);
-    if (_tab)
-      this.update(tab);
+debug.log(that, tab);
+      let data = that.data.get(tab.windowId);
+      if (!data)
+      {
+        data = new Map();
+        that.data.set(tab.windowId, data);
+      }
+      const _tab = that.remove(tab, true); //move tab to the end of the list
+      data.set(tab.id, _tab || tab);
+      if (_tab)
+        that.update(tab);
+    };
+console.log(tab)
+    if (typeof(tab) == "number")
+      chrome.tabs.get(tab, callback);
+    else
+      callback(tab);
   }
 
   remove(tab, noCheck)
@@ -66,12 +75,12 @@ debug.log(data);
     if (!data)
       return;
 
-    const oldTab = data.get(tab.id);
+    const oldTab = data.get(tab.id)||{};
 const _t = Object.assign({}, oldTab);
-debug.log(tab, _t);
+debug.log("update", {tab, oldTab, data, _t});
     for(let i in tab)
     {
-if (oldTab[i] !== tab[i]) debug.log("tab change", i, tab[i], oldTab[i]);
+if (oldTab[i] !== tab[i]) debug.log("tab changed", i, tab[i], oldTab[i]);
       oldTab[i] = tab[i];
     }
 

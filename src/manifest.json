@@ -1,8 +1,8 @@
 {
    "name" : "Tabs+",
-   "description" : "Updated version of abandoned TabPlus extension that works properly in EDGE with vertical tabs",
-   "version" : "0.1.1.1",
-   "version_name": "0.1.1 beta1",
+   "description" : "Control tabs behavior",
+   "version" : "0.1.1.2",
+   "version_name": "0.1.1 beta2",
    "manifest_version" : 3,
    "background" : {
       "service_worker" : "service_worker.js" 

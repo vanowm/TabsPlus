@@ -84,21 +84,30 @@
     "message" : "L"
   },
   "iconAction_4" : {
-    "message" : "Freeze tab"
+    "message" : "Unload tab"
   },
   "iconAction_4_desc" : {
-    "message" : "Lock tab. Don't allow change url"
+    "message" : "Unload tab from memory"
   },
   "iconAction_4_badge" : {
-    "message" : "F"
+    "message" : "U"
   },
   "iconAction_5" : {
-    "message" : "Protect tab"
+    "message" : "Freeze tab"
   },
   "iconAction_5_desc" : {
-    "message" : "Don't allow close the tab"
+    "message" : "Lock tab. Don't allow change url"
   },
   "iconAction_5_badge" : {
+    "message" : "F"
+  },
+  "iconAction_6" : {
+    "message" : "Protect tab"
+  },
+  "iconAction_6_desc" : {
+    "message" : "Don't allow close the tab"
+  },
+  "iconAction_6_badge" : {
     "message" : "P"
   },
   "contextMenu" : {

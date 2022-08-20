@@ -45,7 +45,7 @@ Object.defineProperties(prefs, {
         default: 0,
         onChange: "iconActionChanged",
         group: "iconAction",
-        valid: [0, ACTION_UNDO, ACTION_MARK, ACTION_LIST]
+        valid: [0, ACTION_UNDO, ACTION_MARK, ACTION_LIST, ACTION_UNLOAD]
       },
       expandWindow:
       {
@@ -57,6 +57,7 @@ Object.defineProperties(prefs, {
         default: 0,
         onChange: "createContextMenu",
       },
+
       // syncSettings:
       // {
       //   default: 1,

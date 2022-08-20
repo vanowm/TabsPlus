@@ -10,7 +10,7 @@ importScripts("include/debug.js");
 importScripts("include/tabsManager.js");
 const TABS = new TabsManager();
 importScripts("include/prefs.js");
-
+onReplaced.callback = [];
 String.prototype.truncate = String.prototype.truncate ||  function (n)
 {
   return this.length > n ? this.substring(0, (n / 2) - 1) + '…' + this.substring(this.length - (n / 2) + 2, this.length) : this.toString();
@@ -358,73 +358,8 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) =>
 {
   tabsQuery({active: true, windowId: removeInfo.windowId}, tabs =>
   {
-    const removedTab = TABS.remove({id: tabId, windowId: removeInfo.windowId}),
-          currentTab = tabs[0];
-
-    if (!currentTab) //closed last tab in the window
-      return;
-
-    TABS.noChange = true;
-    let prevTab = TABS.last(removeInfo.windowId, true);
-debug.log("remove", tabId, "prev", prevTab && prevTab.id, "cur", currentTab.id, prevTab && (prevTab.id != tabId && currentTab.id == prevTab.id));
-  //  if ((prevTab && prevTab.id != tabId) || !prefs.afterClose)
-    if (!prefs.afterClose || (prefs.afterClose == 1 && (prevTab && (prevTab.id != tabId && currentTab.id == prevTab.id))))
-      return (TABS.noChange = false, debug.log("noChange", "exit remove", TABS.noChange));
-
-    prevTab = TABS.last(removeInfo.windowId, true);
-    if (!prevTab)
-      prevTab = TABS.last(removeInfo.windowId);
-
-    if (!prevTab)
-      return;
-
-debug.log("removing", tabId, prevTab.id, currentTab.id, "removed ind ", removedTab.index, "cur ind", currentTab.index);
-      const callback = tab =>
-      {
-        TABS.noChange = false;
-        chrome.tabs.update(tab[0].id, {active: true});
-      };
- 
-      if (prefs.afterClose == 1)
-        chrome.tabs.get(prevTab.id, tab => callback([tab])); //previous active
-      else
-        chrome.tabs.query({
-            index: [
-                removedTab.index && --removedTab.index || 0, // left
-                removedTab.index                             // right
-              ][prefs.afterClose-2],
-            windowId: removeInfo.windowId
-          }, callback);
-debug.log([
-                (removedTab.index && --removedTab.index) || 0, // left
-                removedTab.index                             // right
-              ][prefs.afterClose-2], prefs.afterClose-2, (removedTab.index && --removedTab.index) || 0, removedTab.index);
- /*
-      switch (prefs.afterClose)
-      {
-        case 1: // last used tab
-          chrome.tabs.update(tabsArray[0], {active: true});
-          break;
-        case 2: // left
-          chrome.tabs.query({windowId: currentWindowId}, tabs =>
-          {
-            if (currentTabIndex > 0)
-              currentTabIndex = currentTabIndex - 1;
-
-            chrome.tabs.update(tabs[currentTabIndex].id, {active: true});
-          });
-          break;
-        case 3: // right
-          chrome.tabs.query({windowId: currentWindowId}, tabs =>
-          {
-            if (currentTabIndex >= TABS.length)
-              currentTabIndex = TABS.length - 1;
-
-            chrome.tabs.update(tabs[currentTabIndex].id, {active: true});
-          });
-          break;
-      }
-  */
+    const removedTab = TABS.remove({id: tabId, windowId: removeInfo.windowId});
+    activateTab(tabs[0], removedTab);
 debug.log("remove win", TABS.win(removeInfo.windowId));
   });
 
@@ -465,11 +400,7 @@ chrome.tabs.onUpdated.addListener( (tabId, changeInfo, tab) =>
 debug.log("onUpdated end", TABS.find(tabId,tab.windowId));
 });
 
-chrome.tabs.onReplaced.addListener( (addedTabId, removedTabId) =>
-{
-  TABS.remove({id: removedTabId});
-debug.log("onReplaced", addedTabId, removedTabId, TABS.find(addedTabId), TABS.find(removedTabId));
-});
+chrome.tabs.onReplaced.addListener(onReplaced);
 
 chrome.contextMenus.onClicked.addListener((info, tab) =>
 {
@@ -514,8 +445,94 @@ chrome.tabGroups.onUpdated(tabGroup =>
 
 
 
+function onReplaced(addedTabId, removedTabId)
+{
+  const removedTab = TABS.remove({id: removedTabId});
+  console.log("onReplaced tab", TABS.find(addedTabId), TABS.find(addedTabId));
+  chrome.tabs.get(addedTabId, tab =>
+  {
+    TABS.add(tab);
+debug.log("onReplaced", {old: removedTabId, new: addedTabId, oldFound: TABS.find(removedTabId), newFound: TABS.find(addedTabId), removedTab});
+    const callback = onReplaced.callback;
+    while(callback.length)
+      callback.shift()({tab, oldTab: removedTab||TABS.find(removedTabId)});
 
+  });
+}
 
+function activateTab(currentTab, removedTab)
+{
+    if (!currentTab) //closed last tab in the window
+      return;
+
+    TABS.noChange = true;
+    const tabId = removedTab.id,
+          windowId = removedTab.windowId;
+
+    let index = removedTab.index,
+        prevTab = TABS.last(windowId, true);
+
+debug.log("remove", tabId, "prev", prevTab && prevTab.id, "cur", currentTab.id, prevTab && (prevTab.id != tabId && currentTab.id == prevTab.id));
+  //  if ((prevTab && prevTab.id != tabId) || !prefs.afterClose)
+    if (!prefs.afterClose || (prefs.afterClose == 1 && (prevTab && (prevTab.id != tabId && currentTab.id == prevTab.id))))
+      return (TABS.noChange = false, debug.log("noChange", "exit remove", TABS.noChange));
+
+    prevTab = TABS.last(windowId, true);
+    if (!prevTab)
+      prevTab = TABS.last(windowId);
+
+    if (!prevTab)
+      return;
+
+debug.log("removing", tabId, prevTab.id, currentTab.id, "removed ind ", index, "cur ind", currentTab.index);
+      const callback = tab =>
+      {
+        TABS.noChange = false;
+        chrome.tabs.update(tab[0].id, {active: true}).catch(er=>console.log(er));
+      };
+  
+      if (prefs.afterClose == 1)
+        chrome.tabs.get(prevTab.id, tab => callback([tab])); //previous active
+      else
+        chrome.tabs.query({
+            index: [
+                index && --index || 0, // left
+                index                             // right
+              ][prefs.afterClose-2],
+            windowId: windowId
+          }, callback);
+debug.log([
+                (index && --index) || 0, // left
+                index                             // right
+              ][prefs.afterClose-2], prefs.afterClose-2, (index && --index) || 0, index);
+  /*
+      switch (prefs.afterClose)
+      {
+        case 1: // last used tab
+          chrome.tabs.update(tabsArray[0], {active: true});
+          break;
+        case 2: // left
+          chrome.tabs.query({windowId: currentWindowId}, tabs =>
+          {
+            if (currentTabIndex > 0)
+              currentTabIndex = currentTabIndex - 1;
+
+            chrome.tabs.update(tabs[currentTabIndex].id, {active: true});
+          });
+          break;
+        case 3: // right
+          chrome.tabs.query({windowId: currentWindowId}, tabs =>
+          {
+            if (currentTabIndex >= TABS.length)
+              currentTabIndex = TABS.length - 1;
+
+            chrome.tabs.update(tabs[currentTabIndex].id, {active: true});
+          });
+          break;
+      }
+  */
+debug.log("remove win", TABS.win(windowId));
+}
 
 function tabsGet(id, callback)
 {
@@ -577,21 +594,44 @@ debug.log(sessionId);
       };
       
       //get current window screen location
-      chrome.windows.getCurrent(null, function(currWin){
-        if (currWin){
+      chrome.windows.getCurrent(null, function(currWin)
+      {
+        if (currWin)
+        {
           winOptions.left = currWin.left + Math.round((currWin.width - winOptions.width) / 2);
           winOptions.top = currWin.top + Math.round((currWin.height - winOptions.height) / 2);
         }
         
-        chrome.windows.create(winOptions, function(win){
+        chrome.windows.create(winOptions, function(win)
+        {
 debug.log(win);
         });
       });
       break;
 
+    case ACTION_UNLOAD:
+      chrome.tabs.query({currentWindow: true, active: true}, unloadTabs);
+      break;
   }
 }
 
+function unloadTabs(tabs)
+{
+  const callback = ({tab, oldTab}) =>
+  {
+    console.log("onReplaced.callback", tab, oldTab);
+    activateTab(tab, oldTab);
+  };
+  for(let i = 0; i < tabs.length; i++)
+  {
+    if (!tabs[i].discarded)
+    {
+debug.log("unloadTabs", tabs[i]);
+      onReplaced.callback.push(callback);
+      chrome.tabs.discard(tabs[i].id);
+    }
+  }
+}
 
 
 
