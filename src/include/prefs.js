@@ -45,7 +45,7 @@ Object.defineProperties(prefs, {
         default: 0,
         onChange: "iconActionChanged",
         group: "iconAction",
-        valid: [0, ACTION_UNDO, ACTION_MARK, ACTION_LIST, ACTION_UNLOAD]
+        valid: [0, ACTION_UNDO, ACTION_MARK, ACTION_LIST, ACTION_UNLOAD_TAB, ACTION_UNLOAD_ALL]
       },
       expandWindow:
       {
@@ -66,6 +66,11 @@ Object.defineProperties(prefs, {
       {
         noSync: true,
         default: ""
+      },
+      tabs:
+      {
+        noSync: true,
+        default: new Map()
       },
       version:
       {
@@ -146,13 +151,11 @@ function prefsInit(options, type)
 
     if (!valid.length)
     {
-    do
-    {
-      d = chrome.i18n.getMessage(i + "_" + n);
-      if (d)
+      do
       {
-            valid[valid.length] = n;
-          }
+        d = chrome.i18n.getMessage(i + "_" + n);
+        if (d)
+          valid[valid.length] = n;
 
         n++;
       }
@@ -160,7 +163,6 @@ function prefsInit(options, type)
     }
     for(let n = 0; n < valid.length; n++)
     {
-
       d = chrome.i18n.getMessage(i + "_" + n);
       if (!d)
         continue;
@@ -197,17 +199,18 @@ function prefsInit(options, type)
 
     try
     {
+      const n = i;
       Object.defineProperty(prefs, i,
       {
         enumerable: true,
         configurable: false,
         get()
         {
-          return this.data[i].value;
+          return this.data[n].value;
         },
         set(val)
         {
-          this(i, val);
+          this(n, val);
         }
       });
     }catch(er){}

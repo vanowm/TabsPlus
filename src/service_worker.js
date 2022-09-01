@@ -10,6 +10,8 @@ importScripts("include/debug.js");
 importScripts("include/tabsManager.js");
 const TABS = new TabsManager();
 importScripts("include/prefs.js");
+// importScripts("include/icon.js");
+// const ICON = new Icon("ui/icons/action_24.png");
 onReplaced.callback = [];
 String.prototype.truncate = String.prototype.truncate ||  function (n)
 {
@@ -38,14 +40,16 @@ const contextMenu = {
       this.onClick[menuItem.id] = menuItem.onclick;
 
     delete _menu.onclick;
-    return (this.list.set(chrome.contextMenus.create(_menu, () =>
+    const id = chrome.contextMenus.create(_menu, () =>
     {
       if (chrome.runtime.lastError)
-      debug.error("contextMenu.add:", chrome.runtime.lastError.message, menuItem);
+      debug.log("contextMenu.add error:", chrome.runtime.lastError.message, menuItem);
     else
       debug.log("contextMenu.add:", menuItem);
 
-    }), menuItem));
+    });
+    this.list.set(id, menuItem);
+    return id;
   },
   remove: function(id)
   {
@@ -55,9 +59,9 @@ const contextMenu = {
       chrome.contextMenus.remove(id, () =>
       {
         if (chrome.runtime.lastError)
-          debug.error("contextMenu.add:", chrome.runtime.lastError.message, menuItem);
+          debug.log("contextMenu.remove error:", chrome.runtime.lastError.message, menuItem);
         else
-          debug.log("contextMenu.add:", menuItem);
+          debug.log("contextMenu.remove:", menuItem);
       });
     }
     this.list.delete(id);
@@ -81,7 +85,7 @@ const onChange = {
   {
     debug.log("createContextMenu", id, newVal, oldVal, menus, force);
     if (menus === undefined)
-      menus = ["lastUsed", "mark", /*"freeze", "protect",*/ "separator", "options", "separator", "list", "listAction"];
+      menus = ["lastUsed", "mark", "unload", "unloadOthers", /*"freeze", "protect",*/ "separator", "options", "separator", "list", "listAction"];
 
     const contexts = ["action", "page", "frame"],
           menuList = {
@@ -93,8 +97,16 @@ const onChange = {
                 const lastTab = TABS.last(tab.windowId, true, [tab.id]);
                 if (!lastTab)
                   return; 
+                // noChange = TABS.noChange;
+                // TABS.noChange = true;
+                // const callback = (...args) => {
+                //   setTimeout(() => TABS.noChange = noChange);
+                //   TABS.removeListener("activated", callback);
+                //   debug.log("noChange", TABS.noChange, args);
+                // };
+                // TABS.addListener("activated", callback);
+                TABS.activate(lastTab.id);
 
-                chrome.tabs.update(lastTab.id, {active: true});
               }
             },
             undo: {
@@ -113,22 +125,22 @@ const onChange = {
                 actionButton(tab, ACTION_MARK);
               }
             },
-            freeze: {
-              title: chrome.i18n.getMessage("iconAction_" + ACTION_FREEZE),
-              contexts: contexts,
-              onclick: (info, tab) =>
-              {
-                actionButton(tab, ACTION_FREEZE);
-              }
-            },
-            protect: {
-              title: chrome.i18n.getMessage("iconAction_" + ACTION_PROTECT),
-              contexts: contexts,
-              onclick: (info, tab) =>
-              {
-                actionButton(tab, ACTION_PROTECT);
-              }
-            },
+            // freeze: {
+            //   title: chrome.i18n.getMessage("iconAction_" + ACTION_FREEZE),
+            //   contexts: contexts,
+            //   onclick: (info, tab) =>
+            //   {
+            //     actionButton(tab, ACTION_FREEZE);
+            //   }
+            // },
+            // protect: {
+            //   title: chrome.i18n.getMessage("iconAction_" + ACTION_PROTECT),
+            //   contexts: contexts,
+            //   onclick: (info, tab) =>
+            //   {
+            //     actionButton(tab, ACTION_PROTECT);
+            //   }
+            // },
             list: {
               title: "----- [ " + chrome.i18n.getMessage("contextMenu_closedTabs") + " ] -----",
               contexts: ["page", "frame"],
@@ -154,7 +166,24 @@ const onChange = {
               {
                 chrome.runtime.openOptionsPage();
               }
-            }
+            },
+            unload: {
+              title: chrome.i18n.getMessage("iconAction_" + ACTION_UNLOAD_TAB),
+              contexts: contexts,
+              onclick: (info, tab) =>
+              {
+                actionButton(tab, ACTION_UNLOAD_TAB);
+              }
+            },
+            unloadOthers: {
+              title: chrome.i18n.getMessage("iconAction_" + ACTION_UNLOAD_ALL),
+              contexts: contexts,
+              onclick: (info, tab) =>
+              {
+                actionButton(tab, ACTION_UNLOAD_ALL);
+              }
+            },
+
           };
     for (let m = 0; m < menus.length; m++)
     {
@@ -295,6 +324,7 @@ chrome.runtime.onMessage.addListener( (request, sender, sendResponse) =>
 
 chrome.tabs.onActivated.addListener( activeInfo =>
 {
+  TABS.notifyListeners("activated", activeInfo);
   if (TABS.noChange)
     return;
 
@@ -335,7 +365,7 @@ debug.log("noChange", "true", TABS.noChange);
 // without setTimeout it scrolls page down when link opens a new tab (and AutoControl installed https://chrome.google.com/webstore/detail/autocontrol-custom-shortc/lkaihdpfpifdlgoapbfocpmekbokmcfd )
 // is it fixed now?
   // setTimeout(() => {
-    chrome.tabs.update(prevTab.id, {active: true});
+    TABS.activate(prevTab.id);
   // }, 35);
 
   // setTimeout(e => {
@@ -343,9 +373,9 @@ debug.log("noChange", "true", TABS.noChange);
 debug.log("noChange", "false", TABS.noChange);
 
     if (prefs.newTabActivate == 1 || tab.url.match(/^chrome/i))
-      chrome.tabs.update(tab.id, {active: true}); // foreground
+    TABS.activate(tab.id); // foreground
     else if (prefs.newTabActivate == 2 && !tab.url.match(/^chrome/i))
-      chrome.tabs.update(prevTab.id, {active: true}); // background
+    TABS.activate(prevTab.id); // background
 
     setIcon(tab);
 
@@ -394,7 +424,8 @@ chrome.tabs.onUpdated.addListener( (tabId, changeInfo, tab) =>
 {
   if (changeInfo.status === "loading")
     setIcon(tab);
-    debug.log("onUpdated", tabId, changeInfo.status, tab.status, changeInfo, JSON.parse(JSON.stringify(tab)));
+
+  debug.log("onUpdated", {tabId, changeInfoStatus: changeInfo.status, tabStatus: tab.status, changeInfo, tab: JSON.parse(JSON.stringify(tab)), tabStored: TABS.find(tabId)});
 //debug.log("onUpdated", tabId, changeInfo, changeInfo.status === "loading", Object.assign({}, tab));
   TABS.update(Object.assign(changeInfo, {id: tabId, windowId: tab.windowId}));
 debug.log("onUpdated end", TABS.find(tabId,tab.windowId));
@@ -448,11 +479,10 @@ chrome.tabGroups.onUpdated(tabGroup =>
 function onReplaced(addedTabId, removedTabId)
 {
   const removedTab = TABS.remove({id: removedTabId});
-  console.log("onReplaced tab", TABS.find(addedTabId), TABS.find(addedTabId));
   chrome.tabs.get(addedTabId, tab =>
   {
     TABS.add(tab);
-debug.log("onReplaced", {old: removedTabId, new: addedTabId, oldFound: TABS.find(removedTabId), newFound: TABS.find(addedTabId), removedTab});
+    TABS.update(tab, removedTab);
     const callback = onReplaced.callback;
     while(callback.length)
       callback.shift()({tab, oldTab: removedTab||TABS.find(removedTabId)});
@@ -488,7 +518,7 @@ debug.log("removing", tabId, prevTab.id, currentTab.id, "removed ind ", index, "
       const callback = tab =>
       {
         TABS.noChange = false;
-        chrome.tabs.update(tab[0].id, {active: true}).catch(er=>console.log(er));
+        TABS.activate(tab[0].id).catch(er=>console.log(er));
       };
   
       if (prefs.afterClose == 1)
@@ -574,15 +604,15 @@ debug.log(sessionId);
       setIcon(found);
       break;
 
-    case ACTION_FREEZE:
-      found.freeze = !found.freeze;
-      setIcon(found);
-      break;
+    // case ACTION_FREEZE:
+    //   found.freeze = !found.freeze;
+    //   setIcon(found);
+    //   break;
  
-    case ACTION_PROTECT:
-      found.protect = !found.protect;
-      setIcon(found);
-      break;
+    // case ACTION_PROTECT:
+    //   found.protect = !found.protect;
+    //   setIcon(found);
+    //   break;
 
     case ACTION_LIST:
       const winOptions = {
@@ -609,26 +639,37 @@ debug.log(win);
       });
       break;
 
-    case ACTION_UNLOAD:
-      chrome.tabs.query({currentWindow: true, active: true}, unloadTabs);
+    case ACTION_UNLOAD_TAB:
+      chrome.tabs.query({currentWindow: true, active: true}, tabs => unloadTabs(tabs, ACTION_UNLOAD_TAB));
+      break;
+
+    case ACTION_UNLOAD_ALL:
+      chrome.tabs.query({currentWindow: true, active: false}, tabs => unloadTabs(tabs, ACTION_UNLOAD_ALL));
       break;
   }
 }
 
-function unloadTabs(tabs)
+function unloadTabs(tabs, type = ACTION_UNLOAD_TAB)
 {
-  const callback = ({tab, oldTab}) =>
-  {
-    console.log("onReplaced.callback", tab, oldTab);
-    activateTab(tab, oldTab);
-  };
   for(let i = 0; i < tabs.length; i++)
   {
-    if (!tabs[i].discarded)
+    const tab = tabs[i];
+    const callback = () => chrome.tabs.discard(tab.id);
+    if (!tab.discarded)
     {
-debug.log("unloadTabs", tabs[i]);
-      onReplaced.callback.push(callback);
-      chrome.tabs.discard(tabs[i].id);
+      debug.log("unloadTabs", tab, type);
+      if (type === ACTION_UNLOAD_TAB)
+      {
+        const prevTab = TABS.last(tab.windowId, true, [tab.id]);
+        if (!prevTab)
+          continue;
+
+        TABS.activate(prevTab.id).then(callback);
+      }
+      else
+      {
+        callback();
+      }
     }
   }
 }
@@ -661,13 +702,17 @@ function setIcon(tab)
 //      icon = "ui/icons/icon_",
       popup = "",
       action = prefs.iconAction ? "enable" : "disable",
-      color = '#8AB4F8',//window.matchMedia('(prefers-color-scheme: dark)').matches ? "#393939" : "",
       pinned = TABS.find(tab.id, tab.windowId) || tab,
-      prop = ["skipAfterClose", "freeze", "protect"][prefs.iconAction-3],
-      badge = pinned[prop] ? " ❌ " : " 🟢 ";
+      prop = ACTIONPROPS[prefs.iconAction],
+      color = pinned[ACTIONPROPS[ACTION_MARK]] ? "#F88AAF" : "#8AB4F8",//'#393939', //'#8AB4F8',//window.matchMedia('(prefers-color-scheme: dark)').matches ? "#393939" : "",
+      badge = pinned[ACTIONPROPS[ACTION_MARK]] ? "🞅" : "⬤";
 
+console.log(badge, prefs.iconAction, prop);
   if (prefs.iconAction)
-    badge = badge.replace(/ /g, '') + chrome.i18n.getMessage("iconAction_"+prefs.iconAction+"_badge");
+    badge = /*badge.replace(/ /g, ' ') */badge + "" + chrome.i18n.getMessage("iconAction_"+prefs.iconAction+"_badge");
+
+  // if (badge.length == 1)
+  //   badge = "  " + badge + "  ";
 
   if (prefs.iconAction == ACTION_MARK)
   {
@@ -695,6 +740,15 @@ debug.log({action, title, badge, popup});
     tabId: tab.id,
     title: title
   });
+  // abandon dynamic icons, icons are too small to show useful information
+  // ICON.set(
+  //   {
+  //     skipAfterClose: pinned[prop],
+  //     action: prefs.iconAction,
+  //     color
+  //   }
+  // );
+  // ICON.setIcon(tab.id);
 /*
   chrome.action.setIcon(
   {

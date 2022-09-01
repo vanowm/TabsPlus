@@ -42,7 +42,7 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, prefs =>
           url = session.url;
           isMenu = false;
         }
-        option.querySelector(".num").textContent = n; // (_n ? _n + "|" : "") + n;
+        option.querySelector(".num").textContent = (_n !== undefined ? _n + "." : "") + n; // (_n ? _n + "|" : "") + n;
         option.querySelector(".favicon").src = favicon;
         for(let s in session)
           option.dataset[s] = session[s] instanceof Array ? session[s].length : session[s];

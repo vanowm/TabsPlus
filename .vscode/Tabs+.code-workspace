@@ -6,10 +6,15 @@
 	],
 	"settings": {
 		"cSpell.words": [
+			"ACTIONPROPS",
 			"esversion",
 			"loopfunc",
 			"nocheck"
-		]
+		],
+		"jshint.options": {
+			"esversion": 8,
+			"laxbreak": true
+		}
 	},
 	"launch": {
 		"configurations": [

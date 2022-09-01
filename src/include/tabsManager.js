@@ -4,6 +4,7 @@ class TabsManager
   {
     this.data = data;
     this.noChange = false;
+    this.listeners = new Map();
   }
 
   add(tab)
@@ -18,12 +19,11 @@ debug.log(that, tab);
         data = new Map();
         that.data.set(tab.windowId, data);
       }
-      const _tab = that.remove(tab, true); //move tab to the end of the list
-      data.set(tab.id, _tab || tab);
-      if (_tab)
-        that.update(tab);
+      const existedTab = that.remove(tab, true); //move tab to the end of the list
+      data.set(tab.id, existedTab || tab);
+      if (existedTab)
+        that.update(tab, existedTab);
     };
-console.log(tab)
     if (typeof(tab) == "number")
       chrome.tabs.get(tab, callback);
     else
@@ -69,19 +69,29 @@ debug.log(data);
     }
   }
 
-  update(tab)
+  update(tab, oldTab)
   {
     const data = this.data.get(tab.windowId);
     if (!data)
       return;
 
-    const oldTab = data.get(tab.id)||{};
+debug.log("update orig", tab, oldTab);
+    if (!oldTab)
+      oldTab = data.get(tab.id)||{};
+
 const _t = Object.assign({}, oldTab);
 debug.log("update", {tab, oldTab, data, _t});
     for(let i in tab)
     {
-if (oldTab[i] !== tab[i]) debug.log("tab changed", i, tab[i], oldTab[i]);
+debug.log("tab changed", oldTab[i] !== tab[i], i, tab[i], oldTab[i])
+// if (oldTab[i] !== tab[i]) debug.log("tab changed", i, tab[i], oldTab[i]);
       oldTab[i] = tab[i];
+    }
+    for(let i in oldTab)
+    {
+debug.log("tab changed", oldTab[i] !== tab[i], i, tab[i], oldTab[i])
+// if (oldTab[i] !== tab[i]) debug.log("tab changed", i, tab[i], oldTab[i]);
+      tab[i] = oldTab[i];
     }
 
 debug.log("tabs update", _t, data.get(tab.id));
@@ -106,6 +116,11 @@ debug.log(tab.id);
     }
   }
 
+  activate(tabId)
+  {
+    return chrome.tabs.update(tabId, {active: true});
+  }
+
   win(win)
   {
     if (win !== undefined && !(win instanceof Array))
@@ -120,5 +135,35 @@ debug.log(tab.id);
         r[w[i]] = Array.from(this.data.get(w[i]).keys());
     }
     return JSON.stringify(r);
+  }
+
+  addListener(type, listener)
+  {
+    let list;
+    if (!(list = this.listeners.get(type)))
+    {
+      list = new Map();
+      this.listeners.set(type, list);
+    }
+    list.set(listener, type);
+  }
+
+  removeListener(type, listener)
+  {
+    const list = this.listeners.get(type);
+    if (!list)
+      return;
+
+    list.delete(listener);
+  }
+
+  notifyListeners(type, ...args)
+  {
+    const list = this.listeners.get(type);
+    if (!list || !list.size)
+      return;
+
+    for(let i = 0, listeners = [...list.keys()]; i < listeners.length; i++)
+      listeners[i](...args);
   }
 } // class TabsList

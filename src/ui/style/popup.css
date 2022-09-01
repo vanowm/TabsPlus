@@ -74,7 +74,7 @@ body:not([contextMenu]) .option:not(.menu):hover
 .container
 {
   grid-column-start: 3;
-  grid-column-end: 5;
+  grid-column-end: 10;
   grid-row-start: 1;
 }
 
@@ -143,6 +143,7 @@ body:not([contextMenu]) .option:not(.menu):hover
   grid-row-start: 2;
   padding-left: 1em;
   z-index: 1;
+  width: 100%;
 }
 
 .sub
@@ -177,7 +178,10 @@ body:not([context]) .sub:hover
 {
   display: none;
 }
-
+.option:not(.menu) > .favicon[src=""]
+{
+  position: relative;
+}
 .option:not(.menu) > .favicon[src=""]:after
 {
   content: "";
@@ -185,6 +189,8 @@ body:not([context]) .sub:hover
   border: 1px dotted rgba(128,128,128,0.5);
   width: 1.3em;
   height: 1.5em;
+  position: absolute;
+  top: 0;
 }
 
 body:not([contextMenu]) > #contextMenu

@@ -60,7 +60,7 @@
     "message" : "Restore last closed tab"
   },
   "iconAction_1_badge" : {
-    "message" : "R"
+    "message" : "Ｒ"
   },
   "iconAction_2" : {
     "message" : "Toggle mark"
@@ -69,7 +69,7 @@
     "message" : "Unmarked tabs will be skipped from being switched to after closing a tab"
   },
   "iconAction_2_badge" : {
-    "message" : "M"
+    "message" : "Ｍ"
   },
   "iconAction_2_Y" : {
     "message" : "Switch to this tab after closing another tab"
@@ -81,34 +81,25 @@
     "message" : "Show list of closed tabs"
   },
   "iconAction_3_badge" : {
-    "message" : "L"
+    "message" : "Ｌ"
   },
   "iconAction_4" : {
     "message" : "Unload tab"
   },
   "iconAction_4_desc" : {
-    "message" : "Unload tab from memory"
+    "message" : "Unload current tab from memory"
   },
   "iconAction_4_badge" : {
-    "message" : "U"
+    "message" : "Ｕ"
   },
   "iconAction_5" : {
-    "message" : "Freeze tab"
+    "message" : "Unload all tabs"
   },
   "iconAction_5_desc" : {
-    "message" : "Lock tab. Don't allow change url"
+    "message" : "Unload all other tabs from memory"
   },
   "iconAction_5_badge" : {
-    "message" : "F"
-  },
-  "iconAction_6" : {
-    "message" : "Protect tab"
-  },
-  "iconAction_6_desc" : {
-    "message" : "Don't allow close the tab"
-  },
-  "iconAction_6_badge" : {
-    "message" : "P"
+    "message" : "㍳"
   },
   "contextMenu" : {
     "message" : "Context menu"

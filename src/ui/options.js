@@ -43,7 +43,7 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, prefs =>
         elExit = $("exit"),
         rectExit = elExit.getBoundingClientRect();
 
-
+  let rectOptWin;
 console.log(prefs);
   for (let o in prefs)
   {
@@ -59,21 +59,20 @@ console.log(prefs);
         group.setAttribute("group", prefs[o].group);
     }
     row.id = o + "Box";
-    let option = row.querySelector("select");
 
-    let cur = prefs[o].value,
-        isBool = prefs[o].options.length == 2;
+    let cur = prefs[o].value;
+    const isBool = prefs[o].options.length == 2,
+          option = isBool ? document.createElement("input") : row.querySelector("select");
 
     if (cur === undefined || cur < 0 || cur > prefs[o].options.length)
       cur = prefs[o].default;
 
     if (isBool)
     {
-      const checkbox = document.createElement("input");
-      checkbox.checked = cur ? true : false;
-      checkbox.type = "checkbox";
-      option.parentNode.replaceChild(checkbox, option);
-      option = checkbox;
+      option.checked = cur ? true : false;
+      option.type = "checkbox";
+      const select = row.querySelector("select");
+      select.parentNode.replaceChild(option, select);
       row.classList.add("checkbox");
     }
     else
@@ -224,11 +223,8 @@ console.log(prefs);
     }
     catch(er){return;}
 
-    // Create a FileSystemWritableFileStream to write to.
     const writable = await fileHandle.createWritable();
-    // Write the contents of the file to the stream.
     await writable.write(JSON.stringify(getBackupData()));
-    // Close the file and write the contents to disk.
     await writable.close();
   });
 
