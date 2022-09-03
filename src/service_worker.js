@@ -5,6 +5,7 @@
 // }
 const app = chrome.runtime.getManifest();
 
+importScripts("include/messenger.js")
 importScripts("include/common.js");
 importScripts("include/debug.js");
 importScripts("include/tabsManager.js");
@@ -19,6 +20,7 @@ String.prototype.truncate = String.prototype.truncate ||  function (n)
 //  return (this.length > n) ? this.substr(0, n-1) + '…' : this.toString();
 };
 
+let popupOpened = false;
 
 const contextMenu = {
   onClick: {},
@@ -289,37 +291,101 @@ debug.log(itemId, i , details);
 
 }; //onChange
 
-
-
-// messaging
-chrome.runtime.onMessage.addListener( (request, sender, sendResponse) =>
+const onMessage = (message, sender, sendResponse) =>
 {
+  let port = sender;
+  if (sendResponse === undefined)
+  {
+    sendResponse = port.postMessage.bind(port);
+    sender = sender.sender;
+  }
+  console.log("messageHandler", message, port, sender, sendResponse);
   if (sender.id !== chrome.runtime.id)
     return;
 
-  switch (request.type)
+
+  switch (message.type)
   {
     case "prefs":
-      sendResponse(prefs.data);
+      sendResponse({type: "prefs", data: prefs.data});
       break;
+
     case "pref":
+      sendResponse(prefs(message.name, message.value));
 
-      sendResponse(prefs(request.name, request.value));
-
-      if (request.name == "syncSettings")
+      if (message.name == "syncSettings")
       {
-        STORAGE = chrome.storage[request.value ? "sync" : "local"];
+        STORAGE = chrome.storage[message.value ? "sync" : "local"];
         const o = {};
-        o[request.name] = request.value;
+        o[message.name] = message.value;
         prefsSave(o, ()=>{});
       }
 
       sendResponse("ok");
       break;
+
     default:
-      debug.log(request, sender);
+      debug.log(message, sender);
   }
-});
+}; //onMessage();
+
+function onConnect(port)
+{
+  if (port.name == "actionPopup")
+  {
+    popupOpened = true;
+    chrome.tabs.query({currentWindow: true, active: true}, tabs =>
+    {
+      setIcon(tabs[0], true);
+      onConnect.tab = tabs[0];
+    });
+  }
+}
+
+function onDisconnect(port)
+{
+  if (port.name == "actionPopup")
+  {
+    setIcon(onConnect.tab);
+  }
+}
+
+// messaging
+messenger.onMessage(onMessage);
+messenger.onConnect(onConnect);
+messenger.onDisconnect(onDisconnect);
+
+chrome.runtime.onMessage.addListener(onMessage);
+
+
+// chrome.runtime.onMessage.addListener( (request, sender, sendResponse) =>
+// {
+//   if (sender.id !== chrome.runtime.id)
+//     return;
+
+//   switch (request.type)
+//   {
+//     case "prefs":
+//       sendResponse(prefs.data);
+//       break;
+//     case "pref":
+
+//       sendResponse(prefs(request.name, request.value));
+
+//       if (request.name == "syncSettings")
+//       {
+//         STORAGE = chrome.storage[request.value ? "sync" : "local"];
+//         const o = {};
+//         o[request.name] = request.value;
+//         prefsSave(o, ()=>{});
+//       }
+
+//       sendResponse("ok");
+//       break;
+//     default:
+//       debug.log(request, sender);
+//   }
+// });
 
 
 chrome.tabs.onActivated.addListener( activeInfo =>
@@ -623,6 +689,7 @@ debug.log(sessionId);
         height: 640
       };
       
+      setIcon(tab, true);
       //get current window screen location
       chrome.windows.getCurrent(null, function(currWin)
       {
@@ -664,7 +731,7 @@ function unloadTabs(tabs, type = ACTION_UNLOAD_TAB)
         if (!prevTab)
           continue;
 
-        TABS.activate(prevTab.id).then(callback);
+        TABS.activate(prevTab.id).then(callback).catch(er => console.error("unloadTabs", er));
       }
       else
       {
@@ -696,7 +763,7 @@ debug.log(m);
 
 
 
-function setIcon(tab)
+function setIcon(tab, open)
 {
   let title = app.name,
 //      icon = "ui/icons/icon_",
@@ -707,11 +774,11 @@ function setIcon(tab)
       color = pinned[ACTIONPROPS[ACTION_MARK]] ? "#F88AAF" : "#8AB4F8",//'#393939', //'#8AB4F8',//window.matchMedia('(prefers-color-scheme: dark)').matches ? "#393939" : "",
       badge = pinned[ACTIONPROPS[ACTION_MARK]] ? "🞅" : "⬤";
 
-console.log(badge, prefs.iconAction, prop);
   if (prefs.iconAction)
-    badge = /*badge.replace(/ /g, ' ') */badge + "" + chrome.i18n.getMessage("iconAction_"+prefs.iconAction+"_badge");
+    badge = /*badge.replace(/ /g, ' ') */badge + "" + chrome.i18n.getMessage("iconAction_"+prefs.iconAction+"_badge"+ (open ? "_open" : ""));
 
-  // if (badge.length == 1)
+ console.log("setIcon", badge, prefs.iconAction, prop, open, tab);
+ // if (badge.length == 1)
   //   badge = "  " + badge + "  ";
 
   if (prefs.iconAction == ACTION_MARK)

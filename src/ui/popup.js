@@ -1,12 +1,30 @@
-chrome.runtime.sendMessage(null, {type: "prefs"}, prefs =>
+const port = chrome.runtime.connect(null, {name: "actionPopup"});
+port.onMessage.addListener((message, _port) =>
+{
+  switch(message.type)
+  {
+    case "prefs":
+      init(message.data);
+      break;
+    case "prefChanged":
+      port.postMessage({type: "prefs"});
+      break;
+  }
+});
+port.postMessage({type: "prefs"});
+let inited = false;
+function init (prefs)
 {
   const elMenu = document.getElementById("list"),
         elCopy = document.getElementById("copy");
 
+  let contextMenuOption = null;
+
+  elMenu.innerHTML = "";
   chrome.sessions.getRecentlyClosed(sessions => 
   {
-    const elTemplOption = document.querySelector("#templates > .option"),
-          elTemplMenu = document.querySelector("#templates > .menu");
+    const elTemplateOption = document.querySelector("#templates > .option"),
+          elTemplateMenu = document.querySelector("#templates > .menu");
 
     let total = 1;
     genTemplate(elMenu, sessions);
@@ -15,12 +33,12 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, prefs =>
       let n = 1;
       for(let i = 0, isMenu, session, option, el, elTitle, num, favicon, title, url; i < sessions.length; i++)
       {
-  debug.log(sessions[i]);
+  debug.log(i, sessions[i]);
         let _t = 0;
         if (sessions[i].window)
         {
           session = sessions[i].window;
-          option = elTemplMenu.cloneNode(true);
+          option = elTemplateMenu.cloneNode(true);
           _t = total;
           total++;
           genTemplate(option.querySelector(".container"), session.tabs, n);
@@ -35,7 +53,7 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, prefs =>
         }
         else
         {
-          option = elTemplOption.cloneNode(true);
+          option = elTemplateOption.cloneNode(true);
           session = sessions[i].tab || sessions[i];
           favicon = session.favIconUrl;
           title = session.title;
@@ -85,7 +103,7 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, prefs =>
   });
 
   const elContextMenu = document.getElementById("contextMenu");
-  const normalizePozition = (mouseX, mouseY) => {
+  const normalizePosition = (mouseX, mouseY) => {
     const scope = elMenu;
     // ? compute what is the mouse position relative to the container element (scope)
     const {
@@ -106,7 +124,7 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, prefs =>
     let normalizedX = mouseX;
     let normalizedY = mouseY;
 
-    // ? normalzie on X
+    // ? normalize on X
     if (outOfBoundsOnX) {
       normalizedX =
         scopeOffsetX + scope.clientWidth - elContextMenu.clientWidth;
@@ -122,7 +140,9 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, prefs =>
 
 
   document.getElementById("copy").textContent = chrome.i18n.getMessage("contextMenu_copy");
-  let contextMenuOption = null;
+  if (inited)
+    return;
+
   document.documentElement.addEventListener("contextmenu", e =>
   {
     debug.log(e);
@@ -141,7 +161,7 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, prefs =>
   debug.log(contextMenuOption);
   debug.log(e.target.getBoundingClientRect());
     document.body.setAttribute("contextMenu", contextMenuOption.dataset.sessionId);
-    const pos = normalizePozition(e.clientX, e.clientY);
+    const pos = normalizePosition(e.clientX, e.clientY);
     elContextMenu.style.left = pos.x + "px";
     elContextMenu.style.top = pos.y + "px";
     debug.log(pos, e.offsetX, e.offsetY);
@@ -178,8 +198,9 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, prefs =>
   {
     debug.log("blur", e);
   });
-});
+  inited = true;
+}
 
 window.addEventListener('DOMContentLoaded', () => {
-  document.documentElement.classList.remove('notloaded');
+  document.documentElement.classList.remove('notLoaded');
 }, { once: true });

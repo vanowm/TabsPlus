@@ -96,13 +96,12 @@ debug.log("prefsOnChanged", arguments);
     if (onChange[prefs.data[o].onChange] instanceof Function)
       onChange[prefs.data[o].onChange](o, changes[o].newValue, changes[o].oldValue);
 
-    chrome.runtime.sendMessage(null,
-    {
+    messenger({
       type: "prefChanged",
       name: o,
       newValue: changes[o].newValue,
       oldValue: changes[o].oldValue
-    }, resp => debug.log(o, resp, chrome.runtime.lastError));
+    });
   }
 }
 

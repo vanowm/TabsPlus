@@ -29,7 +29,7 @@ const $ = id => document.getElementById(id),
   })(document.body.parentNode);
 })();
 
-chrome.runtime.sendMessage(null, {type: "prefs"}, prefs =>
+chrome.runtime.sendMessage(null, {type: "prefs"}, ({data: prefs}) =>
 {
   const elOpt = document.querySelector("#options > .table"),
         template = elOpt.removeChild(elOpt.firstElementChild),
@@ -228,6 +228,18 @@ console.log(prefs);
     await writable.close();
   });
 
+  const port = chrome.runtime.connect(null, {name: "options"});
+  port.onMessage.addListener((message, _port) =>
+  {
+    switch(message.type)
+    {
+      case "prefChanged":
+        setOption(message.name, message.newValue, false);
+        break;
+  
+    }
+  });
+  
   function restore(data)
   {
     const r = {restored:[], error:[]};
@@ -499,19 +511,6 @@ console.log(prefs);
   document.addEventListener("mousemove", onMouseMove);
   document.addEventListener("mouseup", onMouseUp);
   /* window handler end */
-
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) =>
-  {
-    if (sender.id !== app.id)
-      return;
-
-    switch (request.type)
-    {
-      case "prefChanged":
-        setOption(request.name, request.newValue, false);
-        break;
-    }
-  });
 
   elExit.addEventListener("click", e => window.close());
   backupRestore();
