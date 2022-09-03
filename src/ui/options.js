@@ -44,7 +44,6 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, ({data: prefs}) =>
         rectExit = elExit.getBoundingClientRect();
 
   let rectOptWin;
-console.log(prefs);
   for (let o in prefs)
   {
     if (!prefs[o].options)

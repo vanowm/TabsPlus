@@ -118,7 +118,7 @@ debug.log(tab.id);
 
   activate(tabId)
   {
-    return chrome.tabs.update(tabId, {active: true});
+    return chrome.tabs.update(tabId, {active: true}).catch(onError("TABS.activate"));
   }
 
   win(win)

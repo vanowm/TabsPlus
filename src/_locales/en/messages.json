@@ -81,10 +81,10 @@
     "message" : "Show list of closed tabs"
   },
   "iconAction_3_badge" : {
-    "message" : "▲"
+    "message" : "▼"
   },
   "iconAction_3_badge_open" : {
-    "message" : "▼"
+    "message" : "▲"
   },
   "iconAction_4" : {
     "message" : "Unload tab"

@@ -70,7 +70,10 @@ const contextMenu = {
   },
 };
 
-
+function onError(msg)
+{
+  return er => console.log(msg, er, chrome.runtime.lastError);
+}
 const onChange = {
   iconActionChanged: (id, newVal, oldVal) =>
   {
@@ -421,7 +424,7 @@ chrome.tabs.onCreated.addListener(tab =>
       -1                  // last
     ][prefs.newTabPosition-1];
 debug.log("newTabPosition", prevTab.id,prefs.newTabPosition-1, index);
-    chrome.tabs.move(tab.id, {index});
+    chrome.tabs.move(tab.id, {index}).catch(onError("chrome.tabs.move"));
   }
 // fix for EDGE vertical tabs don't scroll to the new tab https://github.com/MicrosoftDocs/edge-developer/issues/1276
 // is it fixed now?
@@ -770,8 +773,9 @@ function setIcon(tab, open)
       popup = "",
       action = prefs.iconAction ? "enable" : "disable",
       pinned = TABS.find(tab.id, tab.windowId) || tab,
+      colors = ["#8AB4F8", "#F88AAF", "#74839C", "#9B7783"],
       prop = ACTIONPROPS[prefs.iconAction],
-      color = pinned[ACTIONPROPS[ACTION_MARK]] ? "#F88AAF" : "#8AB4F8",//'#393939', //'#8AB4F8',//window.matchMedia('(prefers-color-scheme: dark)').matches ? "#393939" : "",
+      color = colors[~~pinned[ACTIONPROPS[ACTION_MARK]] + ~~open*2],// ? "#F88AAF" : "#8AB4F8",//'#393939', //'#8AB4F8',//window.matchMedia('(prefers-color-scheme: dark)').matches ? "#393939" : "",
       badge = pinned[ACTIONPROPS[ACTION_MARK]] ? "🞅" : "⬤";
 
   if (prefs.iconAction)
