@@ -8,12 +8,14 @@
 		"cSpell.words": [
 			"ACTIONPROPS",
 			"esversion",
+			"ICONLOG",
 			"loopfunc",
 			"nocheck"
 		],
 		"jshint.options": {
 			"esversion": 8,
-			"laxbreak": true
+			"laxbreak": true,
+			"-W083": true //Functions declared within loops referencing an outer scoped variable may lead to confusing semantics. (chrome) (W083)
 		}
 	},
 	"launch": {

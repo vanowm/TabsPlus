@@ -5,7 +5,7 @@
 // }
 const app = chrome.runtime.getManifest();
 
-importScripts("include/messenger.js")
+importScripts("include/messenger.js");
 importScripts("include/common.js");
 importScripts("include/debug.js");
 importScripts("include/tabsManager.js");
@@ -42,6 +42,7 @@ const contextMenu = {
       this.onClick[menuItem.id] = menuItem.onclick;
 
     delete _menu.onclick;
+    chrome.contextMenus.remove(menuItem.id, () => chrome.runtime.lastError);
     const id = chrome.contextMenus.create(_menu, () =>
     {
       if (chrome.runtime.lastError)
@@ -74,6 +75,7 @@ function onError(msg)
 {
   return er => console.log(msg, er, chrome.runtime.lastError);
 }
+
 const onChange = {
   iconActionChanged: (id, newVal, oldVal) =>
   {
@@ -90,7 +92,7 @@ const onChange = {
   {
     debug.log("createContextMenu", id, newVal, oldVal, menus, force);
     if (menus === undefined)
-      menus = ["lastUsed", "mark", "unload", "unloadOthers", /*"freeze", "protect",*/ "separator", "options", "separator", "list", "listAction"];
+      menus = ["lastUsed", "mark", "unload", "unloadWindow", "unloadAll", /*"freeze", "protect",*/ "separator", "options", "separator", "list", "listAction"];
 
     const contexts = ["action", "page", "frame"],
           menuList = {
@@ -180,7 +182,15 @@ const onChange = {
                 actionButton(tab, ACTION_UNLOAD_TAB);
               }
             },
-            unloadOthers: {
+            unloadWindow: {
+              title: chrome.i18n.getMessage("iconAction_" + ACTION_UNLOAD_WINDOW),
+              contexts: contexts,
+              onclick: (info, tab) =>
+              {
+                actionButton(tab, ACTION_UNLOAD_WINDOW);
+              }
+            },
+            unloadAll: {
               title: chrome.i18n.getMessage("iconAction_" + ACTION_UNLOAD_ALL),
               contexts: contexts,
               onclick: (info, tab) =>
@@ -294,7 +304,7 @@ debug.log(itemId, i , details);
 
 }; //onChange
 
-const onMessage = (message, sender, sendResponse) =>
+function onMessage(message, sender, sendResponse)
 {
   let port = sender;
   if (sendResponse === undefined)
@@ -330,7 +340,7 @@ const onMessage = (message, sender, sendResponse) =>
     default:
       debug.log(message, sender);
   }
-}; //onMessage();
+} //onMessage();
 
 function onConnect(port)
 {
@@ -713,8 +723,12 @@ debug.log(win);
       chrome.tabs.query({currentWindow: true, active: true}, tabs => unloadTabs(tabs, ACTION_UNLOAD_TAB));
       break;
 
+    case ACTION_UNLOAD_WINDOW:
+      chrome.tabs.query({currentWindow: true, active: false}, tabs => unloadTabs(tabs, ACTION_UNLOAD_WINDOW));
+      break;
+
     case ACTION_UNLOAD_ALL:
-      chrome.tabs.query({currentWindow: true, active: false}, tabs => unloadTabs(tabs, ACTION_UNLOAD_ALL));
+      chrome.tabs.query({active: false}, tabs => unloadTabs(tabs, ACTION_UNLOAD_ALL));
       break;
   }
 }
@@ -728,7 +742,7 @@ function unloadTabs(tabs, type = ACTION_UNLOAD_TAB)
     if (!tab.discarded)
     {
       debug.log("unloadTabs", tab, type);
-      if (type === ACTION_UNLOAD_TAB)
+      if (type === ACTION_UNLOAD_TAB || type === ACTION_UNLOAD_WINDOW)
       {
         const prevTab = TABS.last(tab.windowId, true, [tab.id]);
         if (!prevTab)
@@ -773,17 +787,23 @@ function setIcon(tab, open)
       popup = "",
       action = prefs.iconAction ? "enable" : "disable",
       pinned = TABS.find(tab.id, tab.windowId) || tab,
-      colors = ["#8AB4F8", "#F88AAF", "#74839C", "#9B7783"],
       prop = ACTIONPROPS[prefs.iconAction],
-      color = colors[~~pinned[ACTIONPROPS[ACTION_MARK]] + ~~open*2],// ? "#F88AAF" : "#8AB4F8",//'#393939', //'#8AB4F8',//window.matchMedia('(prefers-color-scheme: dark)').matches ? "#393939" : "",
-      badge = pinned[ACTIONPROPS[ACTION_MARK]] ? "🞅" : "⬤";
+      color = ["#8AB4F8", "#F88AAF", "#74839C", "#9B7783"][~~pinned[ACTIONPROPS[ACTION_MARK]] + ~~open*2],
+      badge = pinned[ACTIONPROPS[ACTION_MARK]] ? "☐" : "🗹";
 
-  if (prefs.iconAction)
-    badge = /*badge.replace(/ /g, ' ') */badge + "" + chrome.i18n.getMessage("iconAction_"+prefs.iconAction+"_badge"+ (open ? "_open" : ""));
+  if (prefs.iconAction == ACTION_LIST)
+  {
+    popup = "ui/popup.html";
+    badge += open ? " ▲" : " ▼";
+  }
+  else if (prefs.iconAction)
+  {
+    badge = /*badge.replace(/ /g, ' ') */badge + "" + chrome.i18n.getMessage("iconAction_"+prefs.iconAction+"_badge").padStart(2, " ");
+  }
 
- console.log("setIcon", badge, prefs.iconAction, prop, open, tab);
- // if (badge.length == 1)
-  //   badge = "  " + badge + "  ";
+ console.log("setIcon", badge, badge.length, prefs.iconAction, prop, open, tab);
+ if (badge.length < 3)
+    badge = "  " + badge + "  ";
 
   if (prefs.iconAction == ACTION_MARK)
   {
@@ -794,10 +814,6 @@ debug.log("setIcon", pinned.skipAfterClose ? 1 : 0, tab.skipAfterClose, pinned.s
   else if (prefs.iconAction)
   {
     title += "\n" + chrome.i18n.getMessage("iconAction_" + prefs.iconAction);
-  }
-  if (prefs.iconAction == ACTION_LIST)
-  {
-    popup = "ui/popup.html";
   }
   chrome.action[action](tab.id);
   if (color)

@@ -80,12 +80,6 @@
   "iconAction_3" : {
     "message" : "Show list of closed tabs"
   },
-  "iconAction_3_badge" : {
-    "message" : "▼"
-  },
-  "iconAction_3_badge_open" : {
-    "message" : "▲"
-  },
   "iconAction_4" : {
     "message" : "Unload tab"
   },
@@ -96,12 +90,21 @@
     "message" : "Ｕ"
   },
   "iconAction_5" : {
-    "message" : "Unload all tabs"
+    "message" : "Unload all tabs in current window"
   },
   "iconAction_5_desc" : {
-    "message" : "Unload all other tabs from memory"
+    "message" : "Unload all other tabs in current window from memory"
   },
   "iconAction_5_badge" : {
+    "message" : " UW"
+  },
+  "iconAction_6" : {
+    "message" : "Unload all tabs in all windows"
+  },
+  "iconAction_6_desc" : {
+    "message" : "Unload all other tabs in all windows from memory"
+  },
+  "iconAction_6_badge" : {
     "message" : " UA"
   },
   "contextMenu" : {
@@ -126,7 +129,7 @@
     "message" : "Yes"
   },
   "contextMenu_lastUsed": {
-    "message" : "Switch to last used TAB"
+    "message" : "Switch to last used tab"
   },
   "contextMenu_closedTabs": {
     "message" : "Recently closed tabs"

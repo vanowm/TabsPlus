@@ -45,7 +45,8 @@ Object.defineProperties(prefs, {
         default: 0,
         onChange: "iconActionChanged",
         group: "iconAction",
-        valid: [0, ACTION_UNDO, ACTION_MARK, ACTION_LIST, ACTION_UNLOAD_TAB, ACTION_UNLOAD_ALL]
+        map: [0, ACTION_LIST, ACTION_UNDO, ACTION_MARK, ACTION_UNLOAD_TAB, ACTION_UNLOAD_WINDOW, ACTION_UNLOAD_ALL],
+        valid: [0, ACTION_UNDO, ACTION_MARK, ACTION_LIST, ACTION_UNLOAD_TAB, ACTION_UNLOAD_WINDOW, ACTION_UNLOAD_ALL]
       },
       expandWindow:
       {
@@ -160,17 +161,19 @@ function prefsInit(options, type)
       }
       while(d);
     }
+    const map = prefs.data[i].map;
     for(let n = 0; n < valid.length; n++)
     {
       d = chrome.i18n.getMessage(i + "_" + n);
       if (!d)
         continue;
 
-        if (!prefs.data[i].options)
-          prefs.data[i].options = [];
+      if (!prefs.data[i].options)
+        prefs.data[i].options = [];
 
-        prefs.data[i].options[n] = {name: d, description: chrome.i18n.getMessage(i + "_" + n + "_desc")};
-      }
+      const index = map ? map.indexOf(n) : n;
+      prefs.data[i].options[index] = {id: n, name: d, description: chrome.i18n.getMessage(i + "_" + n + "_desc")};
+    }
   }
   const remove = [];
   for (let i in options)

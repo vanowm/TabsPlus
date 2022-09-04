@@ -75,26 +75,26 @@ debug.log(data);
     if (!data)
       return;
 
-debug.log("update orig", tab, oldTab);
+// debug.log("update orig", tab, oldTab);
     if (!oldTab)
       oldTab = data.get(tab.id)||{};
 
-const _t = Object.assign({}, oldTab);
-debug.log("update", {tab, oldTab, data, _t});
+// const _t = Object.assign({}, oldTab);
+// debug.log("update", {tab, oldTab, data, _t});
     for(let i in tab)
     {
-debug.log("tab changed", oldTab[i] !== tab[i], i, tab[i], oldTab[i])
+// debug.log("tab changed", oldTab[i] !== tab[i], i, tab[i], oldTab[i]);
 // if (oldTab[i] !== tab[i]) debug.log("tab changed", i, tab[i], oldTab[i]);
       oldTab[i] = tab[i];
     }
     for(let i in oldTab)
     {
-debug.log("tab changed", oldTab[i] !== tab[i], i, tab[i], oldTab[i])
+// debug.log("tab changed", oldTab[i] !== tab[i], i, tab[i], oldTab[i]);
 // if (oldTab[i] !== tab[i]) debug.log("tab changed", i, tab[i], oldTab[i]);
       tab[i] = oldTab[i];
     }
 
-debug.log("tabs update", _t, data.get(tab.id));
+// debug.log("tabs update", _t, data.get(tab.id));
   }
 
   last(windowId, skipAfterClose, skipIds)

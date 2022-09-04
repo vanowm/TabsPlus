@@ -80,7 +80,7 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, ({data: prefs}) =>
       for (let i = 0, elOpt = document.createElement("option"); i < prefs[o].options.length; i++)
       {
         const opt = elOpt.cloneNode(true);
-        opt.value = i;
+        opt.value = prefs[o].options[i].id;
         opt.textContent = prefs[o].options[i].name;
         if (prefs[o].options[i].description)
           opt.title = prefs[o].options[i].description;
