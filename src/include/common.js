@@ -1,5 +1,5 @@
 const ACTION_UNDO = 1,
-      ACTION_MARK = 2,
+      ACTION_SKIP = 2,
       ACTION_LIST = 3,
       ACTION_UNLOAD_TAB = 4,
       ACTION_UNLOAD_WINDOW = 5,
@@ -8,7 +8,7 @@ const ACTION_UNDO = 1,
       // ACTION_PROTECT = 7;
       ACTIONPROPS = {};
 
-ACTIONPROPS[ACTION_MARK] = "skipAfterClose";
+ACTIONPROPS[ACTION_SKIP] = "skip";
 // ACTIONPROPS[ACTION_FREEZE] = "freeze";
 // ACTIONPROPS[ACTION_PROTECT] = "protect";
       

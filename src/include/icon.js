@@ -67,7 +67,7 @@ console.log(this.ctx.fillStyle);
       return "" + [
         this.baseIconFileName,
         this.width, this.height,
-        opts.skipAfterClose,
+        opts.skip,
         // opts.freeze,
         // opts.protect,
         opts.action,
@@ -83,7 +83,7 @@ console.log(this.ctx.fillStyle);
       {
         this.resetImage();
         this.id = id;
-        this.circle({x: 6, y: 18, radius: 5, startAngle: 0, endAngle: 2 * Math.PI, counterclockwise: false, lineWidth: 0.5, stroke: "red", fill: opts.skipAfterClose ? "red" : "green"});
+        this.circle({x: 6, y: 18, radius: 5, startAngle: 0, endAngle: 2 * Math.PI, counterclockwise: false, lineWidth: 0.5, stroke: "red", fill: opts.skip ? "red" : "green"});
         this.circle({x: 18, y: 18, radius: 5, startAngle: 0, endAngle: 2 * Math.PI, counterclockwise: false, lineWidth: 0.5, stroke: "white", fill: opts.action ? "blue" : "transparent"});
       }
       return this.setIcon();

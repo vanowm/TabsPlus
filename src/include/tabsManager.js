@@ -5,115 +5,81 @@ class TabsManager
     this.data = data;
     this.noChange = false;
     this.listeners = new Map();
-  }
-
-  add(tab)
-  {
-    const that = this;
-    const callback = (tab) =>
-    {
-debug.log(that, tab);
-      let data = that.data.get(tab.windowId);
-      if (!data)
-      {
-        data = new Map();
-        that.data.set(tab.windowId, data);
-      }
-      const existedTab = that.remove(tab, true); //move tab to the end of the list
-      data.set(tab.id, existedTab || tab);
-      if (existedTab)
-        that.update(tab, existedTab);
+    this.loaded = this.load();
+    this.fields = {
+      skip: true,
+      id: false,
+      index: false,
+      windowId: false
     };
-    if (typeof(tab) == "number")
-      chrome.tabs.get(tab, callback);
-    else
-      callback(tab);
   }
 
-  remove(tab, noCheck)
+  add(tab, save = true)
   {
-    const wIds = tab.windowId === undefined ? Array.from(this.data.keys()) : [tab.windowId];
+    const tabOld = this.remove(tab, save) || {}; //move tab to the end of the list
+    const newTab = this.update(tabOld, tab, true);
+    this.data.set(newTab.id, newTab);
+    debug.trace("TAB.add", {id: tab.id, tab, newTab, data: [...this.data.values()]});
+    if (save)
+      this.save();
 
-    for(let i = 0; i < wIds.length; i++)
-    { 
-      let data = this.data.get(wIds[i]);
-
-      if (data)
-      {
-        const r = data.get(tab.id);
-        data.delete(tab.id);
-        this.data.delete(wIds[i]);
-        if (noCheck || (!noCheck && data.size))
-          this.data.set(tab.windowId, data);
-
-        return r;
-      }
-    }
+    // setIcon(newTab);
+    return newTab;
   }
 
-  find(id, windowId)
+  remove(tab, save = true)
   {
-    const data = windowId ? [this.data.get(windowId)] : Array.from(this.data.values());
-    if (!data)
-      return;
+    const ret = this.data.get(tab.id);
+    this.data.delete(tab.id);
+    debug.trace("TAB.remove", {id: tab.id, tab, ret, data: [...this.data.values()]});
+    if (save)
+      this.save();
 
-debug.log(data);
-    for(let i = 0, tab; i < data.length; i++)
-    {
-      if (!data[i])
-        continue;
-
-      tab = data[i].get(id);
-      if (tab)
-        return tab;
-    }
+    return ret;
   }
 
-  update(tab, oldTab)
+  load()
   {
-    const data = this.data.get(tab.windowId);
-    if (!data)
-      return;
-
-// debug.log("update orig", tab, oldTab);
-    if (!oldTab)
-      oldTab = data.get(tab.id)||{};
-
-// const _t = Object.assign({}, oldTab);
-// debug.log("update", {tab, oldTab, data, _t});
-    for(let i in tab)
-    {
-// debug.log("tab changed", oldTab[i] !== tab[i], i, tab[i], oldTab[i]);
-// if (oldTab[i] !== tab[i]) debug.log("tab changed", i, tab[i], oldTab[i]);
-      oldTab[i] = tab[i];
-    }
-    for(let i in oldTab)
-    {
-// debug.log("tab changed", oldTab[i] !== tab[i], i, tab[i], oldTab[i]);
-// if (oldTab[i] !== tab[i]) debug.log("tab changed", i, tab[i], oldTab[i]);
-      tab[i] = oldTab[i];
-    }
-
-// debug.log("tabs update", _t, data.get(tab.id));
+    return chrome.storage.session.get("tabsList");
+  }
+  save()
+  {
+    console.trace("save", ""+[...this.data.keys()], [...this.data.values()]);
+    return chrome.storage.session.set({tabsList:[...this.data.values()]});
   }
 
-  last(windowId, skipAfterClose, skipIds)
+  find(tab)
+  {
+    console.log(Array.from(this.data.values()));
+    return this.data.get(tab.id);
+  }
+
+  update(dataOld, dataNew, overwrite = false)
+  {
+    console.log("TABS.update before", {overwrite, dataOld, dataNew});
+    for(let i in this.fields)
+    {
+      if (i in dataNew && (this.fields[i] || (!this.fields[i] && overwrite)))
+        dataOld[i] = dataNew[i];
+    }
+    console.log("TABS.update after", {overwrite, dataOld, dataNew});
+    return dataOld;
+  }
+
+  last(windowId, skip, skipIds)
   {
     skipIds = skipIds || [];
-    let data;
-    if (windowId)
-      data = this.data.get(windowId) ? this.data.get(windowId).values() : [];
-    else
-      data = Array.from(this.data.values()).pop().values();
-
-    data = Array.from(data);
-    for(let i = data.length - 1; i >= 0; i--)
+    let list = Array.from(this.data.values());
+    for(let i = list.length - 1; i > -1; i--)
     {
-      const tab = data[i];
-debug.log(tab.id);
-      if ((!skipAfterClose || (skipAfterClose && !tab.skipAfterClose)) && skipIds.indexOf(tab.id) == -1)
+      const tab = list[i];
+      if (tab.windowId != windowId)
+        continue;
+
+      if ((!skip || (skip && !tab.skip)) && skipIds.indexOf(tab.id) == -1)
         return tab;
     }
+    return null;
   }
 
   activate(tabId)
@@ -121,18 +87,25 @@ debug.log(tab.id);
     return chrome.tabs.update(tabId, {active: true}).catch(onError("TABS.activate"));
   }
 
-  win(win)
+  win(winId)
   {
-    if (win !== undefined && !(win instanceof Array))
-      win = [win];
-
+    const winIds = (winId !== undefined && !(winId instanceof Array)) ? [winId] : winId;
     const r = {},
-          w = Array.from(this.data.keys());
+          tabs = Array.from(this.data.values());
 
-    for (let i = 0; i < w.length; i++)
+    for (let i = 0; i < tabs.length; i++)
     {
-      if (win && win.indexOf(w[i]) != -1)
-        r[w[i]] = Array.from(this.data.get(w[i]).keys());
+      const tab = Object.assign({}, tabs[i]),
+            windowId = tab.windowId;
+
+      if (winId && winIds.indexOf(windowId) == -1)
+        continue;
+
+      if (!r[windowId])
+        r[windowId] = [];
+
+      delete tab.windowId;
+      r[windowId].push(tab);
     }
     return JSON.stringify(r);
   }

@@ -63,7 +63,7 @@
     "message" : "Ｒ"
   },
   "iconAction_2" : {
-    "message" : "Toggle mark"
+    "message" : "Skip this tab"
   },
   "iconAction_2_desc" : {
     "message" : "Unmarked tabs will be skipped from being switched to after closing a tab"
@@ -76,6 +76,12 @@
   },
   "iconAction_2_N" : {
     "message" : "Don't switch to this tab after closing another tab"
+  },
+  "iconAction_2_0" : {
+    "message" : "Don't skip this tab"
+  },
+  "iconAction_2_1" : {
+    "message" : "Skip this tab"
   },
   "iconAction_3" : {
     "message" : "Show list of closed tabs"
