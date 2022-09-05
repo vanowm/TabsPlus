@@ -370,14 +370,23 @@ const messengerHandler = {
   
   onConnect: (port) =>
   {
+    debug.log("onConnect", port);
     if (port.name == "actionPopup")
     {
       popupOpened = true;
-      chrome.tabs.query({currentWindow: true, active: true}, tabs =>
+      let stop = performance.now() + 1000;
+      //for some reason tabs.query returns 0 tabs when inspecting popup
+      const callback = tabs =>
       {
+        // console.log(stop, stop - performance.now(), tabs);
+        if (!tabs || !tabs.length)
+          return performance.now() < stop && tabsQuery({currentWindow: true, active: true}, callback);// && console.log(stop - performance.now(), tabs);
+
+        // console.log(stop - performance.now(), tabs);
         setIcon(tabs[0], true);
         messengerHandler.onConnect.tab = tabs[0];
-      });
+      };
+      callback();
     }
   },
   
@@ -463,7 +472,7 @@ const tabsHandler = {
       else if (prefs.newTabActivate == 2 && !tab.url.match(/^chrome/i))
       TABS.activate(prevTab.id); // background
   
-      setTimeout(()=>setIcon(tab), 300);
+      setIcon(tab);
     });
     // }, 300);
       
@@ -672,13 +681,13 @@ chrome.tabGroups.onUpdated(tabGroup =>
 
 function tabsGet(id, callback)
 {
-  const cb = tab => (chrome.runtime.lastError) ? setTimeout(e => chrome.tabs.get(id, cb)) : callback(tab); //https://stackoverflow.com/questions/67887896
+  const cb = tabs => (chrome.runtime.lastError) ? setTimeout(e => chrome.tabs.get(id, cb)) : callback(tabs); //https://stackoverflow.com/questions/67887896
   chrome.tabs.get(id).then(cb).catch(er => onError("tabsGet")(er, chrome.runtime.lastError));
 }
 function tabsQuery(query, callback)
 {
-  const cb = tab => (chrome.runtime.lastError) ? setTimeout(e => chrome.tabs.query(query, cb)) : callback(tab); //https://stackoverflow.com/questions/67887896
-  chrome.tabs.query(query).then(cb).catch(er => onError("tabsQuery")(er, chrome.runtime.lastError));
+  const cb = tabs => (chrome.runtime.lastError) ? setTimeout(e => chrome.tabs.query(query, cb)) : callback(tabs); //https://stackoverflow.com/questions/67887896
+  return chrome.tabs.query(query).then(cb).catch(er => onError("tabsQuery")(er, chrome.runtime.lastError));
 }
 
 chrome.sessions.onChanged.addListener((...args) =>
@@ -812,6 +821,9 @@ debug.log(m);
 
 function setIcon(tab, open)
 {
+  if (!tab)
+    return debug.trace("setIcon error tab", tab);
+
   let title = app.name,
 //      icon = "ui/icons/icon_",
       popup = "",

@@ -17,120 +17,121 @@ const prefs = function(name, value)
   }
   return save;
 };
+
+Object.defineProperties(prefs, {
+  data:
+  {
+    configurable: false,
+    enumerable: false,
+  //  writable: false,
+    value:
+    {
+      newTabPosition:
+      {
+        default: 0,
+      },
+      newTabActivate:
+      {
+        default: 0,
+      },
+      afterClose:
+      {
+        default: 0,
+      },
+      iconAction:
+      {
+        default: 0,
+        onChange: "iconActionChanged",
+        group: "iconAction",
+        map: [0, ACTION_LIST, ACTION_UNDO, ACTION_SKIP, ACTION_UNLOAD_TAB, ACTION_UNLOAD_WINDOW, ACTION_UNLOAD_ALL],
+        valid: [0, ACTION_UNDO, ACTION_SKIP, ACTION_LIST, ACTION_UNLOAD_TAB, ACTION_UNLOAD_WINDOW, ACTION_UNLOAD_ALL]
+      },
+      expandWindow:
+      {
+        default: 0,
+        group: "iconAction"
+      },
+      contextMenu:
+      {
+        default: 0,
+        onChange: "createContextMenu",
+      },
+
+      // syncSettings:
+      // {
+      //   default: 1,
+      // },
+      optWin:
+      {
+        noSync: true,
+        default: ""
+      },
+      tabs:
+      {
+        noSync: true,
+        default: new Map()
+      },
+      version:
+      {
+        noSync: true,
+        default: ""
+      }
+    }
+  }
+});
+
+
+function prefsOnChanged(changes, area)
+{
+debug.log("prefsOnChanged", arguments);
+  if (area == "sync" && STORAGE !== chrome.storage.sync)
+    return;
+
+  for (let o in changes)
+  {
+    if (!prefs.data[o])
+      continue;
+
+    if (onChange[prefs.data[o].onChange] instanceof Function)
+      onChange[prefs.data[o].onChange](o, changes[o].newValue, changes[o].oldValue);
+
+    messenger({
+      type: "prefChanged",
+      name: o,
+      newValue: changes[o].newValue,
+      oldValue: changes[o].oldValue
+    });
+  }
+}
+
+function prefsSave(o, callback)
+{
+debug.log(STORAGE === chrome.storage.local, o);
+  if (STORAGE === chrome.storage.local)
+    return STORAGE.set(o, callback);
+
+  const local = {},
+        sync = {};
+
+  for(let i in o)
+  {
+    if (prefs.data[i].noSync || i == "syncSettings")
+      local[i] = o[i];
+    else
+      sync[i] = o[i];
+  }
+debug.log("local", local);
+debug.log("sync", sync);
+  if (Object.keys(local).length)
+    chrome.storage.local.set(local, callback);
+
+  if (Object.keys(sync).length)
+    chrome.storage.sync.set(sync, callback);
+}
+
 let prefsInited = new Promise((resolve, reject) =>
 {
   //options
-
-  Object.defineProperties(prefs, {
-    data:
-    {
-      configurable: false,
-      enumerable: false,
-    //  writable: false,
-      value:
-      {
-        newTabPosition:
-        {
-          default: 0,
-        },
-        newTabActivate:
-        {
-          default: 0,
-        },
-        afterClose:
-        {
-          default: 0,
-        },
-        iconAction:
-        {
-          default: 0,
-          onChange: "iconActionChanged",
-          group: "iconAction",
-          map: [0, ACTION_LIST, ACTION_UNDO, ACTION_SKIP, ACTION_UNLOAD_TAB, ACTION_UNLOAD_WINDOW, ACTION_UNLOAD_ALL],
-          valid: [0, ACTION_UNDO, ACTION_SKIP, ACTION_LIST, ACTION_UNLOAD_TAB, ACTION_UNLOAD_WINDOW, ACTION_UNLOAD_ALL]
-        },
-        expandWindow:
-        {
-          default: 0,
-          group: "iconAction"
-        },
-        contextMenu:
-        {
-          default: 0,
-          onChange: "createContextMenu",
-        },
-
-        // syncSettings:
-        // {
-        //   default: 1,
-        // },
-        optWin:
-        {
-          noSync: true,
-          default: ""
-        },
-        tabs:
-        {
-          noSync: true,
-          default: new Map()
-        },
-        version:
-        {
-          noSync: true,
-          default: ""
-        }
-      }
-    }
-  });
-
-
-  function prefsOnChanged(changes, area)
-  {
-  debug.log("prefsOnChanged", arguments);
-    if (area == "sync" && STORAGE !== chrome.storage.sync)
-      return;
-
-    for (let o in changes)
-    {
-      if (!prefs.data[o])
-        continue;
-
-      if (onChange[prefs.data[o].onChange] instanceof Function)
-        onChange[prefs.data[o].onChange](o, changes[o].newValue, changes[o].oldValue);
-
-      messenger({
-        type: "prefChanged",
-        name: o,
-        newValue: changes[o].newValue,
-        oldValue: changes[o].oldValue
-      });
-    }
-  }
-
-  function prefsSave(o, callback)
-  {
-  debug.log(STORAGE === chrome.storage.local, o);
-    if (STORAGE === chrome.storage.local)
-      return STORAGE.set(o, callback);
-
-    const local = {},
-          sync = {};
-
-    for(let i in o)
-    {
-      if (prefs.data[i].noSync || i == "syncSettings")
-        local[i] = o[i];
-      else
-        sync[i] = o[i];
-    }
-  debug.log("local", local);
-  debug.log("sync", sync);
-    if (Object.keys(local).length)
-      chrome.storage.local.set(local, callback);
-
-    if (Object.keys(sync).length)
-      chrome.storage.sync.set(sync, callback);
-  }
 
   function prefsInit(options, type)
   {
