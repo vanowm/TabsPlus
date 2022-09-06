@@ -14,7 +14,7 @@ const messenger = (() =>
     ports.set(port, port);
     port.onMessage.addListener((...args) =>
     {
-      onMessage.forEach(callback => callback.apply(callback, args));
+      onMessage.forEach(callback => callback(...args));
     });
     port.onDisconnect.addListener(p =>
     {
@@ -25,7 +25,6 @@ const messenger = (() =>
   
   const ret = message =>
   {
-    console.log("messenger", message, ports);
     ports.forEach(port => port.postMessage(message));
   };
   ret.onConnect = callback => onConnect.set(callback, callback);

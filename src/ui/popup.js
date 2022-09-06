@@ -1,22 +1,48 @@
-const port = chrome.runtime.connect(null, {name: "actionPopup"});
-port.onMessage.addListener((message, _port) =>
+let prefs = {},
+    inited = false;
+
+function messenger()
 {
-  switch(message.type)
+  const tab = chrome.tabs.query({active: true, currentWindow: true}).then(tabs => tabs[0]);
+  debug.log("popup messenger");
+  const port = chrome.runtime.connect(null, {name: "actionPopup"});
+  port.onMessage.addListener((message, _port) =>
   {
-    case "prefs":
-      init(message.data);
-      break;
-    case "prefChanged":
-      port.postMessage({type: "prefs"});
-      break;
-  }
-});
-port.postMessage({type: "prefs"});
-let inited = false;
-function init (prefs)
+    debug.log("popup onMessage", message);
+    switch(message.type)
+    {
+      case "prefs":
+        for(let i in message.data)
+        {
+          if (!(i in prefs))
+            prefs[i] = {};
+
+          Object.assign(prefs[i], message.data[i]);
+        }
+        init();
+        break;
+      case "prefChanged":
+        prefs[message.name].value = message.newValue;
+        init(message.name);
+        break;
+    }
+  });
+  port.onDisconnect.addListener(messenger);
+  port.postMessage({type: "prefs"});
+  tab.then(tab => port.postMessage({type: "tab", data: tab}));
+}
+messenger();
+
+chrome.sessions.onChanged.addListener(() => setTimeout(init, 100));
+
+function init (pref)
 {
+  if (pref && pref != "expandWindow")
+    return;
+
   const elMenu = document.getElementById("list"),
         elCopy = document.getElementById("copy");
+        elCopyTitle = document.getElementById("copyTitle");
 
   let contextMenuOption = null;
 
@@ -81,6 +107,7 @@ function init (prefs)
           if (contextMenuOption)
             return;
 
+          contextMenuClose(e);
           e.stopPropagation();
           const sub = e.target.classList.contains("sub") ? e.target : e.target.parentNode.classList.contains("sub") ? e.target.parentNode : null;
           if (sub)
@@ -139,10 +166,12 @@ function init (prefs)
   };
 
 
-  document.getElementById("copy").textContent = chrome.i18n.getMessage("contextMenu_copy");
   if (inited)
     return;
 
+  elCopy.textContent = chrome.i18n.getMessage("contextMenu_copy");
+  elCopyTitle.textContent = chrome.i18n.getMessage("contextMenu_copyTitle");
+  
   document.documentElement.addEventListener("contextmenu", e =>
   {
     debug.log(e);
@@ -171,21 +200,39 @@ function init (prefs)
 
   function contextMenuClose(e)
   {
+    if (e)
+      e.preventDefault();
+
     if (!contextMenuOption)
       return;
 
 
     debug.log(e, contextMenuOption);
-    if (e)
-      e.preventDefault();
 
   debug.log(e&&e.target);
   debug.log(elCopy);
-    if (e && e.target === elCopy)
+    if (e)
     {
-  debug.log(contextMenuOption.dataset.url);
-      navigator.clipboard.writeText(contextMenuOption.dataset.url);
-  //    return;
+      let close = false;
+      if (e.target === elCopy)
+      {
+    debug.log(contextMenuOption.dataset.url);
+        navigator.clipboard.writeText(contextMenuOption.dataset.url);
+        close = true;
+    //    return;
+      }
+      else if (e.target === elCopyTitle)
+      {
+    debug.log(contextMenuOption.dataset.title);
+        navigator.clipboard.writeText(contextMenuOption.dataset.title);
+        close = true;
+    //    return;
+      }
+      if (close)
+      {
+        e.preventDefault();
+      }
+
     }
     document.body.removeAttribute("contextMenu");
     contextMenuOption.classList.remove("highlight");

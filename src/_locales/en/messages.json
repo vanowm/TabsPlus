@@ -143,6 +143,9 @@
   "contextMenu_copy": {
     "message" : "Copy URL"
   },
+  "contextMenu_copyTitle": {
+    "message" : "Copy Title"
+  },
   "settings": {
     "message" : "Settings"
   },

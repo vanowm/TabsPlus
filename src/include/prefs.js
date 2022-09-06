@@ -40,7 +40,7 @@ Object.defineProperties(prefs, {
       },
       iconAction:
       {
-        default: 0,
+        default: ACTION_LIST,
         onChange: "iconActionChanged",
         group: "iconAction",
         map: [0, ACTION_LIST, ACTION_UNDO, ACTION_SKIP, ACTION_UNLOAD_TAB, ACTION_UNLOAD_WINDOW, ACTION_UNLOAD_ALL],
@@ -65,11 +65,6 @@ Object.defineProperties(prefs, {
       {
         noSync: true,
         default: ""
-      },
-      tabs:
-      {
-        noSync: true,
-        default: new Map()
       },
       version:
       {
@@ -238,7 +233,7 @@ let prefsInited = new Promise((resolve, reject) =>
       STORAGE = chrome.storage.local;
       return STORAGE.get(null, e => prefsInit(e, "local"));
     }
-  // debug.log(type, local, options);
+  debug.log(type, local, options);
 
     if (local.length)
     {
@@ -260,15 +255,13 @@ let prefsInited = new Promise((resolve, reject) =>
     TABS.loaded.then(list =>
     {
       list = list.tabsList || [];
-  console.log("TABS.load", list);
       openedTabs.then(tabs =>
       {
         const allTabs = new Map();
         for(let i = 0; i < tabs.length; i++)
         {
-  console.log(tabs[i].id, tabs[i]);
           allTabs.set(tabs[i].id, TABS.add(tabs[i], false));
-          setIcon(tabs[i]);
+          // setIcon(tabs[i]);
         }
 
         for(let i = 0; i < list.length; i++)
@@ -281,13 +274,13 @@ let prefsInited = new Promise((resolve, reject) =>
 
           TABS.add(tab, false);
 
-          setIcon(tab);
-          console.log(i, Object.assign({}, data));
+          // const opened = messengerHandler.onConnect.tab && messengerHandler.onConnect.tab.id === tab.id;
+          // setIcon(tab, opened);
         }
         TABS.save();
+        TABS.data.forEach(tab => setIcon(tab));
         resolve();
       });
-      console.log("tabsList", list, [...TABS.data.values()].map(a => Object.assign({}, a)));
     });
   } //prefsInit();
 

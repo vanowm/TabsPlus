@@ -4,32 +4,36 @@ const $ = id => document.getElementById(id),
 
 (function()
 {
-  let i18nRegExp = /\${((\w+)\.)?([^}]+)}/g,
-      tags = {
+  let tags = {
         app: app,
-        undefined: new Proxy(
-        {},
+        undefined: new Proxy({},
         {
           get(obj, name) {return Object.hasOwnProperty.call(obj, name) ? obj[name] : _(name);},
         })
       },
-      i18n = (a,b,c,d) => tags[c][d];
+      i18n = (() =>
+      {
+        const i18nRegExp = /\${((\w+)\.)?([^}]+)}/g,
+              i18nRepl = (a,b,c,d) => tags[c][d];
+        return text => text.replace(i18nRegExp, i18nRepl);
+      })();
 
   (function loop(node)
   {
     if (node.attributes)
       for(let i = 0; i < node.attributes.length; i++)
-        node.attributes[i].value = node.attributes[i].value.replace(i18nRegExp, i18n);
+        node.attributes[i].value = i18n(node.attributes[i].value);
 
     if (!node.childNodes.length)
-      node.textContent = node.textContent.replace(i18nRegExp, i18n);
+      node.textContent = i18n(node.textContent);
     else
       for(let i = 0; i < node.childNodes.length; i++)
         loop(node.childNodes[i]);
   })(document.body.parentNode);
 })();
 
-chrome.runtime.sendMessage(null, {type: "prefs"}, ({data: prefs}) =>
+chrome.runtime.sendMessage(null, {type: "prefs"})
+.then(({data:prefs}) =>
 {
   const elOpt = document.querySelector("#options > .table"),
         template = elOpt.removeChild(elOpt.firstElementChild),
@@ -157,7 +161,7 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, ({data: prefs}) =>
       data = JSON.parse(elBackupRestore.value.trim());
     }
     catch (er){}
-    console.log(restore(data));
+    debug.log(restore(data));
     backupRestore();
   });
 
@@ -188,7 +192,7 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, ({data: prefs}) =>
       data = JSON.parse(contents);
     }
     catch (er){}
-    console.log(restore(data));
+    debug.log(restore(data));
     backupRestore();
   });
 
@@ -227,17 +231,17 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, ({data: prefs}) =>
     await writable.close();
   });
 
-  const port = chrome.runtime.connect(null, {name: "options"});
-  port.onMessage.addListener((message, _port) =>
-  {
-    switch(message.type)
-    {
-      case "prefChanged":
-        setOption(message.name, message.newValue, false);
-        break;
+  // const port = chrome.runtime.connect(null, {name: "options"});
+  // port.onMessage.addListener((message, _port) =>
+  // {
+  //   switch(message.type)
+  //   {
+  //     case "prefChanged":
+  //       setOption(message.name, message.newValue, false);
+  //       break;
   
-    }
-  });
+  //   }
+  // });
   
   function restore(data)
   {
@@ -251,7 +255,7 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, ({data: prefs}) =>
                + (prefs[i] && prefs[i].options && !prefs[i].options[data[i]] ? 8 : 0);
       if (er || i == "version")
       {
-        console.log("skipped", i, "value", data[i], "error code", er);
+        debug.log("skipped", i, "value", data[i], "error code", er);
         r.error[r.error.length] = i;
         continue;
       }
@@ -442,7 +446,7 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, ({data: prefs}) =>
       (function loop(e)
       {
         if (!savePos.timer)
-          savePos.timer = setInterval(loop, 10);
+          savePos.timer = setInterval(loop, 100);
 
         if (savePos.optWin === prefs.optWin.value)
         {
@@ -515,4 +519,5 @@ chrome.runtime.sendMessage(null, {type: "prefs"}, ({data: prefs}) =>
   backupRestore();
   enableDisable();
   document.body.classList.remove("hide");
-});
+})
+.catch(er => debug.trace("options", er, chrome.runtime.onError));

@@ -10,6 +10,7 @@ class TabsManager
       skip: true,
       id: false,
       index: false,
+      url: true,
       windowId: false
     };
   }
@@ -44,25 +45,22 @@ class TabsManager
   }
   save()
   {
-    console.trace("save", ""+[...this.data.keys()], [...this.data.values()]);
+    debug.trace("save", ""+[...this.data.keys()], [...this.data.values()]);
     return chrome.storage.session.set({tabsList:[...this.data.values()]});
   }
 
   find(tab)
   {
-    console.log(Array.from(this.data.values()));
     return this.data.get(tab.id);
   }
 
   update(dataOld, dataNew, overwrite = false)
   {
-    console.log("TABS.update before", {overwrite, dataOld, dataNew});
     for(let i in this.fields)
     {
       if (i in dataNew && (this.fields[i] || (!this.fields[i] && overwrite)))
         dataOld[i] = dataNew[i];
     }
-    console.log("TABS.update after", {overwrite, dataOld, dataNew});
     return dataOld;
   }
 

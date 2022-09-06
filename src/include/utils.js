@@ -7,5 +7,5 @@ function truncate (str, n = 50)
 
 function onError(msg)
 {
-  return er => console.log(msg, er, chrome.runtime.lastError);
+  return er => debug.log(msg, er, chrome.runtime.lastError);
 }

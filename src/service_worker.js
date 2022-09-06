@@ -4,6 +4,9 @@
 //   console.error(e);
 // }
 const app = chrome.runtime.getManifest();
+//wait for the prefs initialization
+const onWrapper = callback => (...args) => prefsInited.then(() => callback.apply(callback, args));
+
 
 importScripts("include/utils.js");
 importScripts("include/messenger.js");
@@ -15,7 +18,8 @@ importScripts("include/prefs.js");
 // importScripts("include/icon.js");
 // const ICON = new Icon("ui/icons/action_24.png");
 
-let popupOpened = false;
+//broadcast message to reconnect to the service worker
+chrome.runtime.sendMessage(null, "reconnect").catch(()=>{});
 
 const contextMenu = {
   onClick: {},
@@ -66,7 +70,6 @@ const contextMenu = {
   },
   update: function(menuItem)
   {
-    console.log(menuItem, this.list);
     const _menuItem = this.list.get(menuItem.id);
     if (!_menuItem)
       return;
@@ -83,7 +86,6 @@ const contextMenu = {
     delete _menu.onclick;
     delete _menu.id;
     chrome.contextMenus.update(menuItem.id, _menu);
-    console.log(_menu);
   }
 };
 
@@ -94,9 +96,7 @@ const onChange = {
     chrome.tabs.query({}, tabs =>
     {
       for (var i = 0; i < tabs.length; i++)
-      {
         setIcon(tabs[i]);
-      }
     });
   },
 
@@ -325,28 +325,39 @@ debug.log("getRecentlyClosed", itemId, menuItem.id, menuItem, sessions);
     {
       list[i] = list[i].filter((a, i, ar) => a[1].type != "separator" || (i && ar[i-1][1].type != a[1].type));
     }
-    // console.log([...contextMenu.list.entries()].filter((a, i, ar) => a[1].type != "separator" || (i && ar[i-1][1].type != a[1].type)));
   } //createContextMenu()
 }; //onChange
 
 const messengerHandler = {
-  onMessage: (message, sender, sendResponse) =>
+  onMessage: (message, sender, _sendResponse) =>
   {
+    const isPort = _sendResponse === undefined;
+    debug.log("messageHandler", message, sender, _sendResponse);
     let port = sender;
-    if (sendResponse === undefined)
+    if (isPort)
     {
-      sendResponse = port.postMessage.bind(port);
+      _sendResponse = port.postMessage.bind(port);
       sender = sender.sender;
     }
-    console.log("messageHandler", message, port, sender, sendResponse);
+    debug.log("messageHandler2", message, port, sender, _sendResponse);
     if (sender.id !== chrome.runtime.id)
       return;
   
-  
+    const sendResponse = (...args) => (debug.log("messageHandler sendResponse", sender.url, args), _sendResponse.apply(_sendResponse, args));
     switch (message.type)
     {
+      case "tab":
+        if (isPort)
+        {
+          messengerHandler.onConnect.ports.set(port, message.data);
+          messengerHandler.onConnect.tabs.set(message.data.id, message.data);
+          setIcon(message.data);
+        }
+
+        break;
+
       case "prefs":
-        sendResponse({type: "prefs", data: prefs.data});
+        prefsInited.then(() => sendResponse({type: "prefs", data: prefs.data}));
         break;
   
       case "pref":
@@ -359,46 +370,32 @@ const messengerHandler = {
           o[message.name] = message.value;
           prefsSave(o, ()=>{});
         }
-  
-        sendResponse("ok");
         break;
   
-      default:
-        debug.log(message, sender);
     }
+    return true;
   }, //onMessage();
   
   onConnect: (port) =>
   {
+    messengerHandler.onConnect.ports.set(port, null);
     debug.log("onConnect", port);
-    if (port.name == "actionPopup")
-    {
-      popupOpened = true;
-      let stop = performance.now() + 1000;
-      //for some reason tabs.query returns 0 tabs when inspecting popup
-      const callback = tabs =>
-      {
-        // console.log(stop, stop - performance.now(), tabs);
-        if (!tabs || !tabs.length)
-          return performance.now() < stop && tabsQuery({currentWindow: true, active: true}, callback);// && console.log(stop - performance.now(), tabs);
-
-        // console.log(stop - performance.now(), tabs);
-        setIcon(tabs[0], true);
-        messengerHandler.onConnect.tab = tabs[0];
-      };
-      callback();
-    }
   },
   
   onDisconnect: (port) =>
   {
     if (port.name == "actionPopup")
     {
-      setIcon(messengerHandler.onConnect.tab);
+      const tab = messengerHandler.onConnect.ports.get(port);
+      messengerHandler.onConnect.ports.delete(port);
+      messengerHandler.onConnect.tabs.delete(tab.id);
+      setIcon(tab);
     }
   }
   
 };// messengerHandler
+messengerHandler.onConnect.tabs = new Map();
+messengerHandler.onConnect.ports = new Map();
 
 // messaging
 chrome.runtime.onMessage.addListener(messengerHandler.onMessage);
@@ -482,93 +479,88 @@ const tabsHandler = {
   onRemoved: (tabId, removeInfo) =>
   {
     debug.log("onRemoved", {tabId, removeInfo});
-    prefsInited.then(() =>
+    debug.log("onRemoved then", {tabId, removeInfo});
+    tabsQuery({active: true, windowId: removeInfo.windowId}, tabs =>
     {
-      debug.log("onRemoved then", {tabId, removeInfo});
-      tabsQuery({active: true, windowId: removeInfo.windowId}, tabs =>
-      {
-        const removedTab = TABS.remove({id: tabId, windowId: removeInfo.windowId}),
-              currentTab = tabs[0],
-              last = TABS.last(removeInfo.windowId, true);
+      const removedTab = TABS.remove({id: tabId, windowId: removeInfo.windowId}),
+            currentTab = tabs[0],
+            last = TABS.last(removeInfo.windowId, true);
 
-        debug.log("onRemoved currentTab", tabId, currentTab && currentTab.id, last, removeInfo, removedTab);
+      debug.log("onRemoved currentTab", tabId, currentTab && currentTab.id, last, removeInfo, removedTab);
 
-        if (!currentTab) //last tab in window
-          return; 
+      if (!currentTab) //last tab in window
+        return; 
 
-        if (last.id === tabs[0].id)
-          return;
-
-
-      TABS.noChange = true;
-      const windowId = removedTab.windowId;
-
-      let index = removedTab.index,
-          prevTab = TABS.last(windowId, true);
-
-  debug.log("remove", tabId, "prev", prevTab && prevTab.id, "cur", currentTab.id, prevTab && (prevTab.id != tabId && currentTab.id == prevTab.id));
-    //  if ((prevTab && prevTab.id != tabId) || !prefs.afterClose)
-      if (!prefs.afterClose || (prefs.afterClose == 1 && (prevTab && (prevTab.id != tabId && currentTab.id == prevTab.id))))
-        return (TABS.noChange = false, debug.log("noChange", "exit remove", TABS.noChange));
-
-      prevTab = TABS.last(windowId, true);
-      if (!prevTab)
-        prevTab = TABS.last(windowId);
-
-      if (!prevTab)
+      if (last.id === tabs[0].id)
         return;
 
-  debug.log("removing", tabId, prevTab.id, currentTab.id, "removed ind ", index, "cur ind", currentTab.index);
-        const callback = tab =>
-        {
-          console.log("removing callback", chrome.runtime.lastError);
-          TABS.noChange = false;
-          TABS.activate(tab[0].id).catch(er=>console.log(er));
-        };
-    
-        if (prefs.afterClose == 1)
-          chrome.tabs.get(prevTab.id).then( tab => callback([tab])).catch(er => onError("afterClose")(er, chrome.runtime.lastError)); //previous active
-        else
-          chrome.tabs.query({
-              index: [
-                  index && --index || 0, // left
-                  index                  // right
-                ][prefs.afterClose-2],
-              windowId: windowId
-            }, callback);
-  debug.log([
-                  (index && --index) || 0, // left
-                  index                    // right
-                ][prefs.afterClose-2], prefs.afterClose-2, (index && --index) || 0, index);
-    /*
-        switch (prefs.afterClose)
-        {
-          case 1: // last used tab
-            chrome.tabs.update(tabsArray[0], {active: true});
-            break;
-          case 2: // left
-            chrome.tabs.query({windowId: currentWindowId}, tabs =>
-            {
-              if (currentTabIndex > 0)
-                currentTabIndex = currentTabIndex - 1;
 
-              chrome.tabs.update(tabs[currentTabIndex].id, {active: true});
-            });
-            break;
-          case 3: // right
-            chrome.tabs.query({windowId: currentWindowId}, tabs =>
-            {
-              if (currentTabIndex >= TABS.length)
-                currentTabIndex = TABS.length - 1;
+    TABS.noChange = true;
+    const windowId = removedTab.windowId;
 
-              chrome.tabs.update(tabs[currentTabIndex].id, {active: true});
-            });
-            break;
-        }
-    */
-  debug.log("remove win", TABS.win(windowId));
-      });
+    let index = removedTab.index,
+        prevTab = TABS.last(windowId, true);
 
+debug.log("remove", tabId, "prev", prevTab && prevTab.id, "cur", currentTab.id, prevTab && (prevTab.id != tabId && currentTab.id == prevTab.id));
+  //  if ((prevTab && prevTab.id != tabId) || !prefs.afterClose)
+    if (!prefs.afterClose || (prefs.afterClose == 1 && (prevTab && (prevTab.id != tabId && currentTab.id == prevTab.id))))
+      return (TABS.noChange = false, debug.log("noChange", "exit remove", TABS.noChange));
+
+    prevTab = TABS.last(windowId, true);
+    if (!prevTab)
+      prevTab = TABS.last(windowId);
+
+    if (!prevTab)
+      return;
+
+debug.log("removing", tabId, prevTab.id, currentTab.id, "removed ind ", index, "cur ind", currentTab.index);
+      const callback = tab =>
+      {
+        TABS.noChange = false;
+        TABS.activate(tab[0].id).catch(er=>debug.log(er));
+      };
+  
+      if (prefs.afterClose == 1)
+        chrome.tabs.get(prevTab.id).then( tab => callback([tab])).catch(er => onError("afterClose")(er, chrome.runtime.lastError)); //previous active
+      else
+        chrome.tabs.query({
+            index: [
+                index && --index || 0, // left
+                index                  // right
+              ][prefs.afterClose-2],
+            windowId: windowId
+          }, callback);
+debug.log([
+                (index && --index) || 0, // left
+                index                    // right
+              ][prefs.afterClose-2], prefs.afterClose-2, (index && --index) || 0, index);
+  /*
+      switch (prefs.afterClose)
+      {
+        case 1: // last used tab
+          chrome.tabs.update(tabsArray[0], {active: true});
+          break;
+        case 2: // left
+          chrome.tabs.query({windowId: currentWindowId}, tabs =>
+          {
+            if (currentTabIndex > 0)
+              currentTabIndex = currentTabIndex - 1;
+
+            chrome.tabs.update(tabs[currentTabIndex].id, {active: true});
+          });
+          break;
+        case 3: // right
+          chrome.tabs.query({windowId: currentWindowId}, tabs =>
+          {
+            if (currentTabIndex >= TABS.length)
+              currentTabIndex = TABS.length - 1;
+
+            chrome.tabs.update(tabs[currentTabIndex].id, {active: true});
+          });
+          break;
+      }
+  */
+debug.log("remove win", TABS.win(windowId));
     });
   }, //onRemoved()
 
@@ -600,11 +592,9 @@ const tabsHandler = {
     debug.log("onReplaced", {addedTabId, removedTabId});
     chrome.tabs.get(addedTabId, tab =>
     {
-      console.log(tab.id);
       const removedTab = TABS.remove({id: removedTabId});
       TABS.update(tab, removedTab);
       TABS.add(tab);
-      console.log("onReplaced get", tab.id, tab);
       const callback = tabsHandler.onReplaced.callback;
       while(callback.length)
         callback.shift()({tab, oldTab: removedTab||TABS.find({id: removedTabId})});
@@ -614,6 +604,7 @@ const tabsHandler = {
 
   onUpdated: (tabId, changeInfo, tab) =>
   {
+    debug.log("onUpdated", tabId, changeInfo);
     if (changeInfo.status === "loading")
     {
       setIcon(tab);
@@ -623,23 +614,36 @@ const tabsHandler = {
   // //debug.log("onUpdated", tabId, changeInfo, changeInfo.status === "loading", Object.assign({}, tab));
   //   TABS.update(Object.assign(changeInfo, {id: tabId, windowId: tab.windowId}));
   // debug.log("onUpdated end", TABS.find(tabId,tab.windowId));
-  } //onUpdated()
+  }, //onUpdated()
+
+  onMoved: (tabId, changeInfo, tab) =>
+  {
+    debug.log("onMoved", tabId, changeInfo);
+    TABS.update(TABS.find(tab), tab, true);
+    TABS.save();
+  },
 
 };//tabsEventHandler
 
 tabsHandler.onReplaced.callback = [];
 
 for(let i in tabsHandler)
-  chrome.tabs[i].addListener(tabsHandler[i]);
+  chrome.tabs[i].addListener(onWrapper(tabsHandler[i]));
 
 
-chrome.contextMenus.onClicked.addListener((info, tab) =>
+chrome.runtime.onSuspend.addListener(() =>
+{
+  console.log("" + [...TABS.data.keys()]);
+  TABS.save();
+});
+
+chrome.contextMenus.onClicked.addListener(onWrapper((info, tab) =>
 {
   if (contextMenu.onClick[info.menuItemId] instanceof Function)
     contextMenu.onClick[info.menuItemId](info, tab);
-});
+}));
 
-chrome.action.onClicked.addListener(actionButton);
+chrome.action.onClicked.addListener(onWrapper(actionButton));
 
 function setContext(tab)
 {
@@ -690,86 +694,85 @@ function tabsQuery(query, callback)
   return chrome.tabs.query(query).then(cb).catch(er => onError("tabsQuery")(er, chrome.runtime.lastError));
 }
 
-chrome.sessions.onChanged.addListener((...args) =>
+chrome.sessions.onChanged.addListener(() =>
 {
-  chrome.sessions.getRecentlyClosed().then(console.log);
-  // onChange.createContextMenu("", "", "", ["list", "listAction"], true);
+  onChange.createContextMenu();
 });
 
 function actionButton(tab, iconAction)
 {
-  if (iconAction === undefined)
-    iconAction = prefs.iconAction;
+    if (iconAction === undefined)
+      iconAction = prefs.iconAction;
 
-  const found = TABS.find(tab) || tab;
-debug.log("actionButton", iconAction, tab.skip, found.skip, tab === found, tab, found);
-  switch (iconAction)
-  {
-    case ACTION_UNDO:
-      chrome.sessions.getRecentlyClosed(sessions => 
-      {
-debug.log(sessions);
-        const sessionId = sessions[0] && (sessions[0].tab && sessions[0].tab.sessionId) || (sessions[0].window && sessions[0].window.tabs[0] && sessions[0].window.tabs[0].sessionId) || null;
-debug.log(sessionId);
-        chrome.sessions.restore(sessionId);
-      });
-      break;
-
-    case ACTION_SKIP:
-      found.skip = !found.skip;
-      TABS.save();
-      setIcon(found);
-      setContext(found);
-      break;
-
-    // case ACTION_FREEZE:
-    //   found.freeze = !found.freeze;
-    //   setIcon(found);
-    //   break;
- 
-    // case ACTION_PROTECT:
-    //   found.protect = !found.protect;
-    //   setIcon(found);
-    //   break;
-
-    case ACTION_LIST:
-      const winOptions = {
-        url: "ui/popup.html",
-        type: "panel",
-        focused: true,
-        width: 335,
-        height: 640
-      };
-      
-      setIcon(tab, true);
-      //get current window screen location
-      chrome.windows.getCurrent(null, function(currWin)
-      {
-        if (currWin)
+    const found = TABS.find(tab) || tab;
+  debug.log("actionButton", iconAction, tab.skip, found.skip, tab === found, tab, found);
+    switch (iconAction)
+    {
+      case ACTION_UNDO:
+        chrome.sessions.getRecentlyClosed(sessions => 
         {
-          winOptions.left = currWin.left + Math.round((currWin.width - winOptions.width) / 2);
-          winOptions.top = currWin.top + Math.round((currWin.height - winOptions.height) / 2);
-        }
-        
-        chrome.windows.create(winOptions, function(win)
-        {
-debug.log(win);
+  debug.log(sessions);
+          const sessionId = sessions[0] && (sessions[0].tab && sessions[0].tab.sessionId) || (sessions[0].window && sessions[0].window.tabs[0] && sessions[0].window.tabs[0].sessionId) || null;
+  debug.log(sessionId);
+          chrome.sessions.restore(sessionId);
         });
-      });
-      break;
+        break;
 
-    case ACTION_UNLOAD_TAB:
-      chrome.tabs.query({currentWindow: true, active: true}, tabs => unloadTabs(tabs, ACTION_UNLOAD_TAB));
-      break;
+      case ACTION_SKIP:
+        found.skip = !found.skip;
+        TABS.save();
+        setIcon(found);
+        setContext(found);
+        break;
 
-    case ACTION_UNLOAD_WINDOW:
-      chrome.tabs.query({currentWindow: true, active: false}, tabs => unloadTabs(tabs, ACTION_UNLOAD_WINDOW));
-      break;
+      // case ACTION_FREEZE:
+      //   found.freeze = !found.freeze;
+      //   setIcon(found);
+      //   break;
+  
+      // case ACTION_PROTECT:
+      //   found.protect = !found.protect;
+      //   setIcon(found);
+      //   break;
 
-    case ACTION_UNLOAD_ALL:
-      chrome.tabs.query({active: false}, tabs => unloadTabs(tabs, ACTION_UNLOAD_ALL));
-      break;
-  }
+      case ACTION_LIST:
+        const winOptions = {
+          url: "ui/popup.html",
+          type: "panel",
+          focused: true,
+          width: 335,
+          height: 640
+        };
+        
+        setIcon(tab, true);
+        //get current window screen location
+        chrome.windows.getCurrent(null, function(currWin)
+        {
+          if (currWin)
+          {
+            winOptions.left = currWin.left + Math.round((currWin.width - winOptions.width) / 2);
+            winOptions.top = currWin.top + Math.round((currWin.height - winOptions.height) / 2);
+          }
+          
+          chrome.windows.create(winOptions, function(win)
+          {
+  debug.log(win);
+          });
+        });
+        break;
+
+      case ACTION_UNLOAD_TAB:
+        chrome.tabs.query({currentWindow: true, active: true}, tabs => unloadTabs(tabs, ACTION_UNLOAD_TAB));
+        break;
+
+      case ACTION_UNLOAD_WINDOW:
+        chrome.tabs.query({currentWindow: true, active: false}, tabs => unloadTabs(tabs, ACTION_UNLOAD_WINDOW));
+        break;
+
+      case ACTION_UNLOAD_ALL:
+        chrome.tabs.query({active: false}, tabs => unloadTabs(tabs, ACTION_UNLOAD_ALL));
+        break;
+    }//switch
 }
 
 function unloadTabs(tabs, type = ACTION_UNLOAD_TAB)
@@ -819,7 +822,7 @@ debug.log(m);
 
 
 
-function setIcon(tab, open)
+function setIcon(tab)
 {
   if (!tab)
     return debug.trace("setIcon error tab", tab);
@@ -827,10 +830,11 @@ function setIcon(tab, open)
   let title = app.name,
 //      icon = "ui/icons/icon_",
       popup = "",
+      open = ~~messengerHandler.onConnect.tabs.has(tab.id),
       action = prefs.iconAction ? "enable" : "disable",
       skipped = TABS.find(tab) || tab,
       prop = ACTIONPROPS[prefs.iconAction],
-      color = ["#8AB4F8", "#F88AAF", "#74839C", "#9B7783"][~~skipped[ACTIONPROPS[ACTION_SKIP]] + ~~open*2],
+      color = ["#8AB4F8", "#F88AAF", "#74839C", "#9B7783"][~~skipped[ACTIONPROPS[ACTION_SKIP]] + open*2],
       badge = skipped[ACTIONPROPS[ACTION_SKIP]] ? "☐" : "🗹";
 
   if (prefs.iconAction == ACTION_LIST)
@@ -843,7 +847,7 @@ function setIcon(tab, open)
     badge = /*badge.replace(/ /g, ' ') */badge + "" + chrome.i18n.getMessage("iconAction_"+prefs.iconAction+"_badge").padStart(2, " ");
   }
 
-debug.trace("setIcon", {id: tab.id, badge, iconAction: prefs.iconAction, prop, open, tab, skipped});
+debug.trace("setIcon", {id: tab.id, badge, iconAction: prefs.iconAction, prop, open, tab, skipped, tabConnect: messengerHandler.onConnect.tabs});
  if (badge.length < 3)
     badge = "  " + badge + "  ";
 
