@@ -17,10 +17,10 @@ class TabsManager
 
   add(tab, save = true)
   {
-    const tabOld = this.remove(tab, save) || {}; //move tab to the end of the list
+    const tabOld = this.remove(tab, false) || {}; //move tab to the end of the list
     const newTab = this.update(tabOld, tab, true);
     this.data.set(newTab.id, newTab);
-    debug.trace("TAB.add", {id: tab.id, tab, newTab, data: [...this.data.values()]});
+    debug.trace("TAB.add", {id: tab.id, tab, newTab, save, data: [...this.data.values()]});
     if (save)
       this.save();
 
@@ -32,7 +32,7 @@ class TabsManager
   {
     const ret = this.data.get(tab.id);
     this.data.delete(tab.id);
-    debug.trace("TAB.remove", {id: tab.id, tab, ret, data: [...this.data.values()]});
+    debug.trace("TAB.remove", {id: tab.id, tab, ret, save, data: [...this.data.values()]});
     if (save)
       this.save();
 
@@ -43,10 +43,14 @@ class TabsManager
   {
     return chrome.storage.session.get("tabsList");
   }
+
   save()
   {
     debug.trace("save", ""+[...this.data.keys()], [...this.data.values()]);
-    return chrome.storage.session.set({tabsList:[...this.data.values()]});
+    return new Promise((resolve, reject) =>
+    {
+      setAlarm(() => chrome.storage.session.set({tabsList:[...this.data.values()]}).then(resolve).catch(reject), 100, "tabsSave");
+    });
   }
 
   find(tab)
@@ -62,6 +66,23 @@ class TabsManager
         dataOld[i] = dataNew[i];
     }
     return dataOld;
+  }
+
+  updateAll(windowId, save = true)
+  {
+    debug.log("TABS.updateAll", windowId);
+    const query = {};
+    if (windowId)
+      query.windowId = windowId;
+
+    return chrome.tabs.query(query).then(tabs =>
+    {
+      for(let i = 0; i < tabs.length; i++)
+        TABS.update(TABS.find(tabs[i]), tabs[i], true);
+
+      if (save)
+        TABS.save();
+    });
   }
 
   last(windowId, skip, skipIds)
@@ -82,7 +103,14 @@ class TabsManager
 
   activate(tabId)
   {
-    return chrome.tabs.update(tabId, {active: true}).catch(onError("TABS.activate"));
+    return chrome.tabs.update(tabId, {active: true})
+            .catch(er => debug.error("TABS.activate", er));
+  }
+
+  deactivate(tabId)
+  {
+    return chrome.tabs.update(tabId, {active: false})
+            .catch(er => debug.error("TABS.activate", er));
   }
 
   win(winId)

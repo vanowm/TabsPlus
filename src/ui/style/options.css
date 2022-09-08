@@ -137,7 +137,7 @@ body
 select
 {
   font-family: monospace;
-  font-size: 1em;
+  /* font-size: 1em; */
   width: -webkit-fill-available;
   padding: 0.3em;
 }
@@ -145,8 +145,11 @@ select
 .default
 {
   font-style: italic;
+  font-weight: bolder;
   text-shadow: 1px 0px 0px #000;
+  /* color: red; */
 }
+
 option
 {
   font-style: normal;
@@ -247,4 +250,11 @@ textarea.error
     background-color: #B15A5C;
     color: black;
   }
+
+  .default
+  {
+    text-shadow: 0 0 4px #777;
+    /* color: red; */
+  }
+  
 }

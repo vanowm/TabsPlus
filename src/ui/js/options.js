@@ -81,6 +81,7 @@ chrome.runtime.sendMessage(null, {type: "prefs"})
     else
     {
       row.classList.add("select");
+      console.log(prefs);
       for (let i = 0, elOpt = document.createElement("option"); i < prefs[o].options.length; i++)
       {
         const opt = elOpt.cloneNode(true);
@@ -89,7 +90,8 @@ chrome.runtime.sendMessage(null, {type: "prefs"})
         if (prefs[o].options[i].description)
           opt.title = prefs[o].options[i].description;
 
-        if (prefs[o].default == i)
+        const def = prefs[o].map ? prefs[o].map.indexOf(prefs[o].default) : prefs[o].default;
+        if (def == i)
           opt.className = "default";
 
         option.appendChild(opt);
@@ -250,12 +252,12 @@ chrome.runtime.sendMessage(null, {type: "prefs"})
     {
       const er = (!prefs[i] && 1)
                + (prefs[i] && (typeof(prefs[i].default)) != typeof(data[i]) ? 2 : 0)
+               + (prefs[i] && prefs[i].options && !prefs[i].options[data[i]] ? 4 : 0);
 //                 + (prefs[i] && !prefs[i].options ? 4 : 0)
-//                 + (i == "version" ? 4 : 0)
-               + (prefs[i] && prefs[i].options && !prefs[i].options[data[i]] ? 8 : 0);
+//                 + (i == "version" ? 4 : 0);
       if (er || i == "version")
       {
-        debug.log("skipped", i, "value", data[i], "error code", er);
+        debug.log("skipped", i, "value", data[i], "error code", er, er ? "(" + ["option doesn't exit", "wrong value type", "value out of range"].reduce((a,b,i) => ((er >> i) & 1) ? a += (a ? ", " : "") + b : a, "") + ")" : "");
         r.error[r.error.length] = i;
         continue;
       }
@@ -281,9 +283,9 @@ chrome.runtime.sendMessage(null, {type: "prefs"})
 
     switch(option.id)
     {
-        case "syncSettings":
-          o = Object.assign(o, getBackupData());
-          break;
+      case "syncSettings":
+        o = Object.assign(o, getBackupData());
+        break;
 
     }
     if (option.selectedOptions)
@@ -316,14 +318,15 @@ chrome.runtime.sendMessage(null, {type: "prefs"})
       if (onChange[prefs[id].onChange] instanceof Function)
         onChange[prefs[id].onChange](id, value);
 
-        if (save || save === undefined)
-          chrome.runtime.sendMessage(null,
-          {
-            type: "pref",
-            name: id,
-            value: value
-          }, resp => {});
-
+      if (save || save === undefined)
+      {
+        chrome.runtime.sendMessage(null,
+        {
+          type: "pref",
+          name: id,
+          value: value
+        }, resp => {});
+      }
       return;
     }
     let changed;

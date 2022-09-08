@@ -251,36 +251,35 @@ let prefsInited = new Promise((resolve, reject) =>
 
     // context menu
     onChange.createContextMenu();
-    const openedTabs = chrome.tabs.query({});
-    TABS.loaded.then(list =>
+    const allTabs = chrome.tabs.query({});
+    const aTabs = chrome.tabs.query({active: true});
+    TABS.loaded.then(async list =>
     {
       list = list.tabsList || [];
-      openedTabs.then(tabs =>
+      const activeTabs = await aTabs;
+      const tabs = await allTabs;
+      for(let i = 0; i < tabs.length; i++)
+        TABS.add(tabs[i], false);
+
+      for(let i = 0; i < list.length; i++)
       {
-        const allTabs = new Map();
-        for(let i = 0; i < tabs.length; i++)
-        {
-          allTabs.set(tabs[i].id, TABS.add(tabs[i], false));
-          // setIcon(tabs[i]);
-        }
+        let tab = list[i],
+            data = TABS.data.get(tab.id);
 
-        for(let i = 0; i < list.length; i++)
-        {
-          let tab = list[i],
-                data = TABS.data.get(tab.id);
+        if (data)
+          tab = TABS.update(data, tab);
 
-          if (data)
-            tab = TABS.update(data, tab);
+        TABS.add(tab, false);
 
-          TABS.add(tab, false);
+        // const opened = messengerHandler.onConnect.tab && messengerHandler.onConnect.tab.id === tab.id;
+        // setIcon(tab, opened);
+      }
+      for(let i = 0; i < activeTabs.length; i++)
+        TABS.add(activeTabs[i], false);
 
-          // const opened = messengerHandler.onConnect.tab && messengerHandler.onConnect.tab.id === tab.id;
-          // setIcon(tab, opened);
-        }
-        TABS.save();
-        TABS.data.forEach(tab => setIcon(tab));
-        resolve();
-      });
+      TABS.save();
+      TABS.data.forEach(tab => setIcon(tab));
+      resolve();
     });
   } //prefsInit();
 
