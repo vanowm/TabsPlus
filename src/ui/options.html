@@ -32,13 +32,15 @@
         </div>
       </div>
       <div id="backupRestoreBox">
-        <textarea id="backupRestore" title="Settings string" placeholder=""></textarea>
+        <textarea id="backupRestore" title="Settings string" placeholder="" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
         <div class="backupRestoreControls">
           <button id="restore">${restore}</button>
           <button id="restoreFile">${restoreFile}</button>
           <button id="backup">${backup_file}</button>
+          <button id="reset">${reset}</button>
         </div>
       </div>
+      <div id="iconActionNotes" class="row notes disabled"><span class="label"></span><label class="option">${iconActionNotes}</label></div>
     </div>
   </div>
   <script type="text/javascript" src="../include/common.js"></script>

@@ -116,6 +116,9 @@
   "contextMenu" : {
     "message" : "Context menu"
   },
+  "contextMenu_desc" : {
+    "message" : "Add menu to the right click on any pages"
+  },
   "contextMenu_0" : {
     "message" : "No"
   },
@@ -175,5 +178,11 @@
   },
   "expandWindow_desc": {
     "message" : "Show all tabs of closed window in the \"List of closed tabs popup\""
+  },
+  "iconActionNotes": {
+    "message" : "These also available via right click"
+  },
+  "reset": {
+    "message" : "Reset"
   }
 }

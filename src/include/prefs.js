@@ -32,11 +32,11 @@ Object.defineProperties(prefs, {
       },
       newTabActivate:
       {
-        default: 0,
+        default: 1,
       },
       afterClose:
       {
-        default: 0,
+        default: 1,
       },
       iconAction:
       {

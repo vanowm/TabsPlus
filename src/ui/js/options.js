@@ -2,7 +2,7 @@ const $ = id => document.getElementById(id),
       app = chrome.runtime.getManifest(),
       _ = chrome.i18n.getMessage;
 
-(function()
+new Promise((resolve, reject) =>
 {
   let tags = {
         app: app,
@@ -30,14 +30,26 @@ const $ = id => document.getElementById(id),
       for(let i = 0; i < node.childNodes.length; i++)
         loop(node.childNodes[i]);
   })(document.body.parentNode);
-})();
+  resolve();
+});
 
+console.log("options", performance.now());
 chrome.runtime.sendMessage(null, {type: "prefs"})
-.then(({data:prefs}) =>
+.then(init)
+.catch(er => debug.trace("options", er, chrome.runtime.onError));
+
+// init({data: {
+//   optWin: {},
+//   iconAction: {},
+//   expandWindow: {options:[]},
+// }});
+function init({data:prefs})
 {
+  console.log("options init", performance.now());
   const elOpt = document.querySelector("#options > .table"),
         template = elOpt.removeChild(elOpt.firstElementChild),
         elRestore = $("restore"),
+        elReset = $("reset"),
         elRestoreFile = $("restoreFile"),
         elBackup = $("backup"),
         elHeader = $("header"),
@@ -124,7 +136,7 @@ chrome.runtime.sendMessage(null, {type: "prefs"})
     if (onChange[prefs[o].onChange] instanceof Function)
       onChange[prefs[o].onChange](o, cur);
 
-  }
+  }//for(o in prefs)
 
   elBackupRestore.addEventListener("input", e =>
   {
@@ -167,6 +179,7 @@ chrome.runtime.sendMessage(null, {type: "prefs"})
     backupRestore();
   });
 
+  elReset.addEventListener("click", reset);
   elRestoreFile.addEventListener("click", async e =>
   {
     const opts = {
@@ -267,6 +280,15 @@ chrome.runtime.sendMessage(null, {type: "prefs"})
       r.restored[r.restored.length] = i;
     }
     return r;
+  }
+
+  function reset()
+  {
+    for(let o in prefs)
+    {
+      if (!prefs[o].noSync)
+        setOption(o, prefs[o].default);
+    }
   }
 
   function onChange(e)
@@ -519,8 +541,10 @@ chrome.runtime.sendMessage(null, {type: "prefs"})
   /* window handler end */
 
   elExit.addEventListener("click", e => window.close());
+  const elIconActionBox = document.getElementById("iconActionBox");
+  elIconActionBox.parentNode.insertBefore(document.getElementById("iconActionNotes"), elIconActionBox.nextSibling);
   backupRestore();
   enableDisable();
   document.body.classList.remove("hide");
-})
-.catch(er => debug.trace("options", er, chrome.runtime.onError));
+  console.log("performance", performance.now());
+}//init()

@@ -69,7 +69,7 @@ importScripts("include/prefs.js");
 // const ICON = new Icon("ui/icons/action_24.png");
 
 //broadcast message to reconnect to the service worker
-chrome.runtime.sendMessage(null, "reconnect").catch(()=>{});
+chrome.runtime.sendMessage(null, "reconnect").catch(er => debug.log("sendMessage reconnect", er));
 
 const contextMenu = {
   onClick: {},
@@ -91,17 +91,18 @@ const contextMenu = {
       this.onClick[menuItem.id] = menuItem.onclick;
 
     delete _menu.onclick;
+    delete _menu.maxList;
     chrome.contextMenus.remove(menuItem.id, () => chrome.runtime.lastError);
     const id = chrome.contextMenus.create(_menu, () =>
     {
       if (chrome.runtime.lastError)
-      debug.log("contextMenu.add error:", chrome.runtime.lastError.message, menuItem);
+      debug.trace("contextMenu.add error:", chrome.runtime.lastError.message, menuItem);
     // else
-      // debug.log("contextMenu.add:", menuItem);
+    //   debug.trace("contextMenu.add:", menuItem);
 
     });
     this.list.set(id, menuItem);
-    return id;
+    return menuItem;
   },
   remove: function(id)
   {
@@ -111,9 +112,9 @@ const contextMenu = {
       chrome.contextMenus.remove(id, () =>
       {
         if (chrome.runtime.lastError)
-          debug.log("contextMenu.remove error:", chrome.runtime.lastError.message, menuItem);
-        else
-          debug.log("contextMenu.remove:", menuItem);
+          debug.trace("contextMenu.remove error:", chrome.runtime.lastError.message, menuItem);
+        // else
+        //   debug.trace("contextMenu.remove:", menuItem);
       });
     }
     this.list.delete(id);
@@ -153,10 +154,10 @@ const onChange = {
 
   createContextMenu: (id, newVal, oldVal, data) =>
   {
-    debug.log("createContextMenu", {id, newVal, oldVal, data});
+    debug.trace("createContextMenu", {id, newVal, oldVal, data});
     let menus;
     if (data === undefined)
-      menus = ["lastUsed", "skip", "unload", "unloadWindow", "unloadAll", /*"freeze", "protect",*/ "separator", "options", "separator", "list", "listAction"];
+      menus = ["listAction", "lastUsed", "skip", "unload", "unloadWindow", "unloadAll", /*"freeze", "protect",*/ "separator", "options", "separator", "list"];
     else
       menus = Object.keys(data);
 
@@ -230,6 +231,7 @@ const onChange = {
             listAction: {
               title: chrome.i18n.getMessage("contextMenu_closedTabs"),
               contexts: ["action"],
+              maxList: 25,
               type: "menu"
             },
             options: {
@@ -295,13 +297,13 @@ const onChange = {
             menuItem.contexts.splice(i--, 1);
         }
       }
-debug.log(itemId, menuItem);
-
       const isList = itemId.substring(0, 4) == "list",
             menuId = menuItem.type == "menu" && itemId;
 
       if (menuId)
         delete menuItem.type;
+
+debug.log({itemId, menuItem, isList});
 
       if (isUpdate)
       {
@@ -311,42 +313,39 @@ debug.log(itemId, menuItem);
       else
         contextMenu.remove(menuItem.id);
 
+      contextMenu.add(menuItem, force);
       if (isList)
       {
-        chrome.sessions.getRecentlyClosed(sessions => // jshint ignore:line
+        chrome.sessions.getRecentlyClosed(sessions =>
         {
-debug.log("getRecentlyClosed", itemId, menuItem.id, menuItem, sessions);
-          if (sessions.length && menuItem.contexts.length)
+debug.log("getRecentlyClosed", {force, itemId, menuItemId: menuItem.id, menuItem, sessions});
+          if (!sessions.length && menuItem.contexts.length)
           {
-            contextMenu.add(menuItem, force);
+            return contextMenu.remove(menuItem, force);
           }
           let i = 0,
-              max = 10;
+              max = menuItem.maxList || 10;
           do
           {
             if (!sessions[i] || (itemId === "list" && !prefs.contextMenu))
               break;
             
             const tabs = sessions[i].tab && [sessions[i].tab] || sessions[i].window.tabs;
-            for(let n = 0; i++ < 10 && n < tabs.length; n++)
+            for(let n = 0; i < max && n < tabs.length; n++, i++)
             {
               const tab = tabs[n];
               const details = {
                 title: truncate(tab.title),
                 id: itemId + i,
                 contexts: ["page", "frame"],
-                onclick: e => // jshint ignore:line
-                {
-                  chrome.sessions.restore(tab.sessionId);
-                }
+                onclick: e => chrome.sessions.restore(tab.sessionId)
               };
               if (menuId)
               {
                 details.parentId = menuId;
                 details.contexts = menuItem.contexts;
               }
-
-              contextMenu.add(details, true);
+console.log(n, i, details, contextMenu.add(details, true));
             }
           }
           while(i < max);
@@ -359,8 +358,7 @@ debug.log("getRecentlyClosed", itemId, menuItem.id, menuItem, sessions);
         continue;
       }
 
-      contextMenu.add(menuItem, force);
-    }
+    } //for (menus)
     const list = [...contextMenu.list.entries()].reduce((ret, a) =>
     {
       for(let i = 0; i < a[1].contexts.length; i++)
@@ -372,6 +370,7 @@ debug.log("getRecentlyClosed", itemId, menuItem.id, menuItem, sessions);
       }
       return ret;
     }, {});
+
     for(let i in list)
     {
       list[i] = list[i].filter((a, i, ar) => a[1].type != "separator" || (i && ar[i-1][1].type != a[1].type));
@@ -596,7 +595,7 @@ debug.log("removing", tabId, prevTab.id, currentTab.id, "removed ind ", index, "
     {
       TABS.noChange = false;
       TABS.activate(tabs[0].id)
-      .catch(er=>debug.log(er));
+      .catch(er=>debug.error("onRemoved callback", er));
     };
 
     if (prefs.afterClose == 1)

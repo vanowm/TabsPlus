@@ -49,7 +49,7 @@ class TabsManager
     debug.trace("save", ""+[...this.data.keys()], [...this.data.values()]);
     return new Promise((resolve, reject) =>
     {
-      setAlarm(() => chrome.storage.session.set({tabsList:[...this.data.values()]}).then(resolve).catch(reject), 100, "tabsSave");
+      setAlarm(() => chrome.storage.session.set({tabsList:[...this.data.values()]}).then(resolve).catch(er => (debug.error("TABS.save", er), reject(er))), 100, "tabsSave");
     });
   }
 

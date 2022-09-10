@@ -13,6 +13,7 @@ html, body
 body.hide
 {
   opacity: 0;
+  pointer-events: none;
 }
 body
 {
@@ -84,10 +85,10 @@ body
 
 .table
 {
-/*  display: table;
+  /*  display: table;
   width: fit-content;*/
   border-collapse: collapse;
-}
+  }
 
 .group
 {
@@ -138,7 +139,8 @@ select
 {
   font-family: monospace;
   /* font-size: 1em; */
-  width: -webkit-fill-available;
+  /* width: -webkit-fill-available; */
+  width: 100%;
   padding: 0.3em;
 }
 
@@ -166,7 +168,7 @@ option.default
   vertical-align: super;
   font-size: 0.5em;
 }
-textarea
+#backupRestore
 {
   height: 5em;
   width: 100%;
@@ -220,6 +222,44 @@ textarea.error
 .backupRestoreControls
 {
   margin-top: 0.5em;
+}
+.notes
+{
+  font-style: italic;
+  font-size: 0.8em;
+  position: relative;
+  height: 1.5em;
+}
+.notes > .option
+{
+  position: absolute;
+  padding: 0;
+  text-align: end;
+  width: 100%;
+}
+
+.checkbox > .option
+{
+  max-width: 2em;
+}
+
+#reset
+{
+  float: right;
+  margin: 1.1em 0 0 0.5em;
+  font-size: 0.6em;
+  padding: 0;
+  appearance: none;
+  border: 0;
+  background-color: transparent;
+  color: inherit;
+  cursor: pointer;
+  vertical-align: bottom;
+}
+
+#reset:hover
+{
+  text-shadow: 0 0 1px red;
 }
 
 @media (prefers-color-scheme: dark)
