@@ -64,7 +64,7 @@ Object.defineProperties(prefs, {
       optWin:
       {
         noSync: true,
-        default: ""
+        default: []
       },
       version:
       {
@@ -253,23 +253,31 @@ let prefsInited = new Promise((resolve, reject) =>
     onChange.createContextMenu();
     const allTabs = chrome.tabs.query({});
     const aTabs = chrome.tabs.query({active: true});
+    const currentTab = chrome.tabs.query({active: true, currentWindow: true});
     TABS.loaded.then(async list =>
     {
       list = list.tabsList || [];
       const activeTabs = await aTabs;
       const tabs = await allTabs;
+      debug.log(list, tabs);
+      // const uuid = new Map();
       for(let i = 0; i < tabs.length; i++)
-        TABS.add(tabs[i], false);
-
+      {
+        const tab = TABS.add(tabs[i], false);
+        // uuid.set(tab.uuid, tab);
+      }
       for(let i = 0; i < list.length; i++)
       {
-        let tab = list[i],
-            data = TABS.data.get(tab.id);
+        let tab = list[i];
+        // if (uuid.has(tab.uuid))
+        //   tab.id = uuid.get(tab.uuid).id;
+
+        const data = TABS.data.get(tab.id);
 
         if (data)
           tab = TABS.update(data, tab);
 
-        TABS.add(tab, false);
+        // TABS.add(tab, false);
 
         // const opened = messengerHandler.onConnect.tab && messengerHandler.onConnect.tab.id === tab.id;
         // setIcon(tab, opened);
@@ -280,6 +288,8 @@ let prefsInited = new Promise((resolve, reject) =>
       TABS.save();
       TABS.data.forEach(tab => setIcon(tab));
       resolve();
+      const [tab] = await currentTab;
+      setContext(tab);
     });
   } //prefsInit();
 

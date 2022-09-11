@@ -44,7 +44,7 @@ const setAlarm = (()=>
     exec: name =>
     {
       const alarm = list.get(name);
-      console.log("alarm.exec", name, alarm);
+      debug.log("alarm.exec", name, alarm);
       if (!alarm || !alarm.timer || !(alarm.func instanceof Function))
         return;
 
@@ -102,6 +102,7 @@ const contextMenu = {
 
     });
     this.list.set(id, menuItem);
+    // debug.log("contextMenu.add", id, menuItem);
     return menuItem;
   },
   remove: function(id)
@@ -345,7 +346,8 @@ debug.log("getRecentlyClosed", {force, itemId, menuItemId: menuItem.id, menuItem
                 details.parentId = menuId;
                 details.contexts = menuItem.contexts;
               }
-console.log(n, i, details, contextMenu.add(details, true));
+              contextMenu.add(details, true);
+// console.log(n, i, details, contextMenu.add(details, true));
             }
           }
           while(i < max);

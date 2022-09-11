@@ -11,7 +11,8 @@ class TabsManager
       id: false,
       index: false,
       url: true,
-      windowId: false
+      windowId: false,
+      // uuid: ""
     };
   }
 
@@ -19,6 +20,7 @@ class TabsManager
   {
     const tabOld = this.remove(tab, false) || {}; //move tab to the end of the list
     const newTab = this.update(tabOld, tab, true);
+    // newTab.uuid = this.getUUID(newTab.url, /*newTab.windowId, */newTab.index);
     this.data.set(newTab.id, newTab);
     debug.trace("TAB.add", {id: tab.id, tab, newTab, save, data: [...this.data.values()]});
     if (save)
@@ -32,7 +34,7 @@ class TabsManager
   {
     const ret = this.data.get(tab.id);
     this.data.delete(tab.id);
-    debug.trace("TAB.remove", {id: tab.id, tab, ret, save, data: [...this.data.values()]});
+    // debug.trace("TAB.remove", {id: tab.id, tab, ret, save, data: [...this.data.values()]});
     if (save)
       this.save();
 
@@ -41,7 +43,7 @@ class TabsManager
 
   load()
   {
-    return chrome.storage.session.get("tabsList");
+    return chrome.storage.local.get("tabsList");
   }
 
   save()
@@ -49,8 +51,41 @@ class TabsManager
     debug.trace("save", ""+[...this.data.keys()], [...this.data.values()]);
     return new Promise((resolve, reject) =>
     {
-      setAlarm(() => chrome.storage.session.set({tabsList:[...this.data.values()]}).then(resolve).catch(er => (debug.error("TABS.save", er), reject(er))), 100, "tabsSave");
+      setAlarm(() => chrome.storage.local.set({tabsList:[...this.data.values()]}).then(resolve).catch(er => (debug.error("TABS.save", er), reject(er))), 100, "tabsSave");
     });
+  }
+
+  getUUID(...data)
+  {
+    let str = "";
+    for(let n = 0; n < data.length; n++)
+    {
+      str += data[n];
+      let c = 0,
+          r = "";
+
+      for (let i = 0; i < str.length; i++)
+        c = (c + (str.charCodeAt(i) * (i + 1) - 1)) & 0xfffffffffffff;
+
+      str = str.substring(str.length / 2) + c.toString(16) + str.substring(0, str.length / 2);
+      for(let i = 0, p = c + str.length; i < 32; i++)
+      {
+        if (i == 8 || i == 12 || i == 16 || i == 20)
+          r += "-";
+
+        c = p = (str[(i ** i + p + 1) % str.length]).charCodeAt(0) + p + i;
+        if (i == 12)
+          c = (c % 5) + 1; //1-5
+        else if (i == 16)
+          c = (c % 4) + 8; //8-B
+        else
+          c %= 16; //0-F
+
+        r += c.toString(16);
+      }
+      str = r;
+    }
+    return str;
   }
 
   find(tab)

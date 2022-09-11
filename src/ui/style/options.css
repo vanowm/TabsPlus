@@ -77,6 +77,7 @@ body
   width: 100% !important;
   height: 100% !important;
   border-radius: initial;
+  resize: none;
 }
 .options_table.maximized #header
 {
@@ -88,7 +89,7 @@ body
   /*  display: table;
   width: fit-content;*/
   border-collapse: collapse;
-  }
+}
 
 .group
 {

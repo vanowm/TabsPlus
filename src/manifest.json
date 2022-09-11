@@ -1,8 +1,8 @@
 {
    "name" : "Tabs+",
-   "description" : "Control tabs behavior",
-   "version" : "0.1.1.5",
-   "version_name": "0.1.1 beta5",
+   "description" : "Take control of your tabs",
+   "version" : "0.1.1.6",
+   "version_name": "0.1.1 beta6",
    "manifest_version" : 3,
    "background" : {
       "service_worker" : "service_worker.js" 

@@ -33,7 +33,7 @@ new Promise((resolve, reject) =>
   resolve();
 });
 
-console.log("options", performance.now());
+debug.log("options", performance.now());
 chrome.runtime.sendMessage(null, {type: "prefs"})
 .then(init)
 .catch(er => debug.trace("options", er, chrome.runtime.onError));
@@ -45,7 +45,7 @@ chrome.runtime.sendMessage(null, {type: "prefs"})
 // }});
 function init({data:prefs})
 {
-  console.log("options init", performance.now());
+  debug.log("options init", performance.now());
   const elOpt = document.querySelector("#options > .table"),
         template = elOpt.removeChild(elOpt.firstElementChild),
         elRestore = $("restore"),
@@ -93,7 +93,7 @@ function init({data:prefs})
     else
     {
       row.classList.add("select");
-      console.log(prefs);
+      debug.log(prefs);
       for (let i = 0, elOpt = document.createElement("option"); i < prefs[o].options.length; i++)
       {
         const opt = elOpt.cloneNode(true);
@@ -138,8 +138,18 @@ function init({data:prefs})
 
   }//for(o in prefs)
 
+  window.addEventListener("keydown", e =>
+  {
+    if (e.key == "s" && e.ctrlKey && !e.altKey)
+    {
+      e.preventDefault();
+      backup();
+    }
+  });
+
   elBackupRestore.addEventListener("input", e =>
   {
+    debug.log(e);
     let data = {},
         err = false,
         value = elBackupRestore.value.trim();
@@ -211,11 +221,24 @@ function init({data:prefs})
     backupRestore();
   });
 
-  elBackup.addEventListener("click", async e =>
+  elBackup.addEventListener("click", backup);
+
+  // const port = chrome.runtime.connect(null, {name: "options"});
+  // port.onMessage.addListener((message, _port) =>
+  // {
+  //   switch(message.type)
+  //   {
+  //     case "prefChanged":
+  //       setOption(message.name, message.newValue, false);
+  //       break;
+  
+  //   }
+  // });
+  async function backup(e)
   {
     const d = new Date(),
           pad = t => ("" + t).padStart(2, "0"),
-		      options = {
+          options = {
             suggestedName: app.name + "_" + _("settings") + "_v" + app.version + "_"
                             + d.getFullYear()
                             + pad(d.getMonth() + 1)
@@ -244,20 +267,7 @@ function init({data:prefs})
     const writable = await fileHandle.createWritable();
     await writable.write(JSON.stringify(getBackupData()));
     await writable.close();
-  });
-
-  // const port = chrome.runtime.connect(null, {name: "options"});
-  // port.onMessage.addListener((message, _port) =>
-  // {
-  //   switch(message.type)
-  //   {
-  //     case "prefChanged":
-  //       setOption(message.name, message.newValue, false);
-  //       break;
-  
-  //   }
-  // });
-  
+  }
   function restore(data)
   {
     const r = {restored:[], error:[]};
@@ -286,9 +296,17 @@ function init({data:prefs})
   {
     for(let o in prefs)
     {
-      if (!prefs[o].noSync)
-        setOption(o, prefs[o].default);
+      if (!["version"].includes(o))
+      {
+        prefs[o].value = prefs[o].default;
+        setOption(o, prefs[o].value, o != "optWin");
+      }
     }
+    elOptWin.style.width = 0;
+    elOptWin.style.height = 0;
+    elOptWin.classList.remove("maximized");
+    updatePos();
+    savePos();
   }
 
   function onChange(e)
@@ -375,9 +393,25 @@ function init({data:prefs})
     return o;
   }
 
-  function backupRestore()
+  function backupRestore(init)
   {
-    elBackupRestore.value = JSON.stringify(getBackupData());
+    const value = JSON.stringify(getBackupData());
+    if (elBackupRestore.value !== value)
+    {
+      // debug.trace(init, JSON.stringify(getBackupData()));
+      // when value changed, undo removed
+      if (init)
+        elBackupRestore.value = value;
+      else
+      {
+        // add ability undo directly in the textarea when options changed
+        const active = document.activeElement;
+        elBackupRestore.focus();
+        elBackupRestore.select();
+        window.document.execCommand('insertText', false, value);
+        active.focus();
+      }
+    }
     elBackupRestore.classList.remove("error");
     elRestore.disabled = true;
     elBackup.disabled = false;
@@ -457,13 +491,16 @@ function init({data:prefs})
   function savePos()
   {
     win.rectBody = document.body.getBoundingClientRect();
-    prefs.optWin.value = [
-      (elOptWin.style.left ? parseFloat(elOptWin.style.left) : rectOptWin.left) || "",
-      (elOptWin.style.top ? parseFloat(elOptWin.style.top) : rectOptWin.top) || "",
-      (elOptWin.style.width ? parseFloat(elOptWin.style.width) : rectOptWin.width) || "",
-      (elOptWin.style.height ? parseFloat(elOptWin.style.height) : rectOptWin.height) || "",
-      ~~elOptWin.classList.contains("maximized") || ""].join("|");
+    const position = [
+      ~~(elOptWin.style.left ? parseFloat(elOptWin.style.left) : rectOptWin.left),
+      ~~(elOptWin.style.top ? parseFloat(elOptWin.style.top) : rectOptWin.top),
+      ~~(elOptWin.style.width ? parseFloat(elOptWin.style.width) : rectOptWin.width),
+      ~~(elOptWin.style.height ? parseFloat(elOptWin.style.height) : rectOptWin.height),
+      ~~elOptWin.classList.contains("maximized")];
 
+    const optWinPrev = "" + prefs.optWin.value;
+    prefs.optWin.value = position;
+    
     if (!savePos.timer)
     {
       const time = 500;
@@ -473,7 +510,7 @@ function init({data:prefs})
         if (!savePos.timer)
           savePos.timer = setInterval(loop, 100);
 
-        if (savePos.optWin === prefs.optWin.value)
+        if ("" + savePos.optWin == "" + prefs.optWin.value)
         {
           clearInterval(savePos.timer);
           savePos.timer = null;
@@ -486,20 +523,47 @@ function init({data:prefs})
         if (++i > time || !i)
         {
           i = 0;
-          chrome.runtime.sendMessage(null,
+          if ("" + prefs.optWin.value !== "" + savePos.optWin && "" + prefs.optWin.value !== optWinPrev)
           {
-            type: "pref",
-            name: "optWin",
-            value: prefs.optWin.value
-          }, resp =>
-          {
+            chrome.runtime.sendMessage(null,
+            {
+              type: "pref",
+              name: "optWin",
+              value: prefs.optWin.value
+            }, resp =>
+            {
+              backupRestore();
+            });
+          }
+          else
             backupRestore();
-          });
+
           return;
         }
       })();
     }
   }
+
+  function updatePos(position = prefs.optWin.value)
+  {
+    if (!Array.isArray(position))
+      position = [];
+
+    rectOptWin = elOptWin.getBoundingClientRect();
+    win.rectBody = document.body.getBoundingClientRect();
+    elOptWin.style.left = (win.rectBody.width - rectOptWin.width) / 2 + "px";
+    elOptWin.style.top = (win.rectBody.height - rectOptWin.height) / 2  + "px";
+    let [winX, winY, winW, winH, winM] = position;
+
+    winW = Math.max(~~winW, rectOptWin.width);
+    winH = Math.max(~~winH, rectOptWin.height);
+    elOptWin.style.left = Math.max(0, Math.min(win.rectBody.width - winW, winX)) + "px";
+    elOptWin.style.top = Math.max(0, (winY + winH > win.rectBody.height ? win.rectBody.height - winH : winY)) + "px";
+    elOptWin.style.width = winW + "px";
+    elOptWin.style.height = winH + "px";
+    elOptWin.classList.toggle("maximized", Boolean(winM));
+  }
+
 
   const win = {
     heightDif: elOptWin.scrollHeight - elOptions.scrollHeight,
@@ -508,24 +572,8 @@ function init({data:prefs})
   };
 
   elOptWin.style.minHeight = elOptions.scrollHeight + win.heightDif + "px";
-  rectOptWin = elOptWin.getBoundingClientRect();
-  win.rectBody = document.body.getBoundingClientRect();
-	elOptWin.style.left = (win.rectBody.width - rectOptWin.width) / 2 + "px";
-	elOptWin.style.top = (win.rectBody.height - rectOptWin.height) / 2  + "px";
 
-  prefs.optWin.value = prefs.optWin.value && prefs.optWin.value.split("|").map(n => Number(n)) || [];
-  if (prefs.optWin.value.length)
-  {
-    let [winX, winY, winW, winH, winM] = prefs.optWin.value;
-
-    winW = Math.max(winW, rectOptWin.width);
-    winH = Math.max(winH, rectOptWin.height);
-    elOptWin.style.left = Math.max(0, Math.min(win.rectBody.width - winW, winX)) + "px";
-    elOptWin.style.top = Math.max(0, (winY + winH > win.rectBody.height ? win.rectBody.height - winH : winY)) + "px";
-    elOptWin.style.width = winW + "px";
-    elOptWin.style.height = winH + "px";
-    elOptWin.classList.toggle("maximized", winM);
-  }
+  updatePos();
   new ResizeObserver(e =>
   {
     if (elOptWin.style.height !== "")
@@ -543,8 +591,8 @@ function init({data:prefs})
   elExit.addEventListener("click", e => window.close());
   const elIconActionBox = document.getElementById("iconActionBox");
   elIconActionBox.parentNode.insertBefore(document.getElementById("iconActionNotes"), elIconActionBox.nextSibling);
-  backupRestore();
+  backupRestore(true);
   enableDisable();
   document.body.classList.remove("hide");
-  console.log("performance", performance.now());
+  debug.log("performance", performance.now());
 }//init()
