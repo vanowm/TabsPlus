@@ -33,7 +33,7 @@
       // "internalConsoleOptions": "openOnSessionStart",
 				"webRoot": "${workspaceFolder}/src/",
 				// "outputCapture": "console",
-				"url": "edge://extensions/",
+				// "url": "edge://extensions/",
 				"runtimeArgs": [
       // "--auto-open-devtools-for-tabs ",
 			"--load-extension=${workspaceFolder}/src/"

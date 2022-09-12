@@ -1,6 +1,8 @@
 html
 {
   width: 97vw;
+  --backgroundColor: white;
+  background-color: var(--backgroundColor);
 }
 html, body
 {
@@ -17,8 +19,8 @@ body.hide
 }
 body
 {
-  font-family: tahoma;
-  font-size: 1em;
+  /* font-family: tahoma; */
+  font-size: 0.9em;
   opacity: 1;
   transition: opacity 0.3s;
   -webkit-user-select: none;
@@ -50,18 +52,20 @@ body
 
 .options
 {
-  margin: 1em 2em;
+  margin: 1em 0.5em;
   display: flex;
   flex-direction: column;
   height: -webkit-fill-available;
+  /* padding: 1em; */
+  margin-bottom: 2.5em;
 }
 
 .options_table
 {
   box-shadow: 0 0 15px 4px rgba(0,0,0,0.5);
-/*  padding: 1em 3em;*/
+  /*  padding: 1em 3em;*/
   border-radius: 0.4em;
-  border-spacing: 0.4em;
+  /* border-spacing: 0.4em; */
   resize: both;
   overflow: hidden;
   min-width: max-content;
@@ -89,6 +93,7 @@ body
   /*  display: table;
   width: fit-content;*/
   border-collapse: collapse;
+  /* margin: 0 1em; */
 }
 
 .group
@@ -98,14 +103,33 @@ body
 
 [group] .row:not(:first-child) > :first-child
 {
-  display: block;
-  margin-left: 1em;
+  /* display: block; */
+  /* margin-left: 1em; */
+  /* line-height: 1em; */
 }
+[group] .row:not(:first-child) > :first-child::before
+{
+  content: "";
+  display: inline-block;
+  width: 1em;
+  /* height: 1em; */
+  /* background: white; */
+}
+
 .row
 {
   display: table-row;
+  padding: 1em;
+}
+.row:hover
+{
+  background-color: rgba(127,127,127,0.1);
 }
 
+.row:hover > .option > *
+{
+  background-color: var(--backgroundColor);
+}
 .row[title] *
 {
   cursor: help;
@@ -114,11 +138,12 @@ body
 .row > *
 {
   display: table-cell;
+  vertical-align: middle;
 }
 
 .option
 {
-  padding: 0.5em 0 0.5em 1em;
+  padding: 0.2em 1em 0.2em 1em;
 }
 /*
 .row.checkbox > .option
@@ -134,23 +159,25 @@ body
 .label
 {
   text-align: left;
+  /* font-size: 0.9em; */
+  padding-left: 1em;
 }
 
 select
 {
   font-family: monospace;
-  /* font-size: 1em; */
+  font-size: 1em;
   /* width: -webkit-fill-available; */
   width: 100%;
-  padding: 0.3em;
+  padding: 0.2em;
+  vertical-align: middle;
 }
 
 .default
 {
   font-style: italic;
   font-weight: bolder;
-  text-shadow: 1px 0px 0px #000;
-  /* color: red; */
+  /* text-shadow: 1px 0px 0px #000; */
 }
 
 option
@@ -160,8 +187,8 @@ option
 
 option.default
 {
-  font-weight: bold;
-  text-shadow: none;
+  /* font-weight: bolder; */
+  /* text-shadow: none; */
 }
 
 .ver
@@ -173,11 +200,12 @@ option.default
 {
   height: 5em;
   width: 100%;
-/*  display: block;*/
+  /*  display: block;*/
   flex: auto;
   resize: none;
   min-height: 2em;
   box-sizing: border-box;
+  font-size: 1.2em;
 }
 
 textarea.error
@@ -218,7 +246,8 @@ textarea.error
 }
 .options_table.resized #backupRestoreBox
 {
-  margin-bottom: 2em;
+  margin-bottom: 0.0em;
+  padding: 1em;
 }
 .backupRestoreControls
 {
@@ -247,8 +276,8 @@ textarea.error
 #reset
 {
   float: right;
-  margin: 1.1em 0 0 0.5em;
-  font-size: 0.6em;
+  margin: 1.3em 0.5em 0 0;
+  font-size: 0.7em;
   padding: 0;
   appearance: none;
   border: 0;
@@ -268,6 +297,7 @@ textarea.error
 
   html
   {
+    --backgroundColor:#292A2D;
     background-color: #202124;
     color: silver;
   }
@@ -278,7 +308,7 @@ textarea.error
   }
   .options_table
   {
-    background-color: #292A2D;
+    background-color: var(--backgroundColor);
   }
   #header
   {
@@ -294,7 +324,7 @@ textarea.error
 
   .default
   {
-    text-shadow: 0 0 4px #777;
+    /* text-shadow: 0 0 4px #111; */
     /* color: red; */
   }
   

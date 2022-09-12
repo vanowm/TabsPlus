@@ -2,6 +2,9 @@ const $ = id => document.getElementById(id),
       app = chrome.runtime.getManifest(),
       _ = chrome.i18n.getMessage;
 
+if (!app.version_name)
+  app.version_name = app.version;
+
 new Promise((resolve, reject) =>
 {
   let tags = {
@@ -33,7 +36,7 @@ new Promise((resolve, reject) =>
   resolve();
 });
 
-debug.log("options", performance.now());
+debug.debug("options", performance.now());
 chrome.runtime.sendMessage(null, {type: "prefs"})
 .then(init)
 .catch(er => debug.trace("options", er, chrome.runtime.onError));
@@ -45,7 +48,7 @@ chrome.runtime.sendMessage(null, {type: "prefs"})
 // }});
 function init({data:prefs})
 {
-  debug.log("options init", performance.now());
+  debug.debug("options init", performance.now());
   const elOpt = document.querySelector("#options > .table"),
         template = elOpt.removeChild(elOpt.firstElementChild),
         elRestore = $("restore"),
@@ -93,7 +96,7 @@ function init({data:prefs})
     else
     {
       row.classList.add("select");
-      debug.log(prefs);
+      debug.debug(prefs);
       for (let i = 0, elOpt = document.createElement("option"); i < prefs[o].options.length; i++)
       {
         const opt = elOpt.cloneNode(true);
@@ -128,10 +131,15 @@ function init({data:prefs})
       if (isBool)
       {
         if (e.target.classList.contains("label"))
+        {
+          option.focus();
           option.click();
+        }
       }
       else
+      {
         option.focus();
+      }
     });
     if (onChange[prefs[o].onChange] instanceof Function)
       onChange[prefs[o].onChange](o, cur);
@@ -149,7 +157,7 @@ function init({data:prefs})
 
   elBackupRestore.addEventListener("input", e =>
   {
-    debug.log(e);
+    debug.debug(e);
     let data = {},
         err = false,
         value = elBackupRestore.value.trim();
@@ -173,7 +181,7 @@ function init({data:prefs})
       }
     }
     e.target.classList.toggle("error", value !== "" && err);
-    elRestore.disabled = !changed || !Object.keys(data).length;
+    elRestore.disabled = err || !changed || !Object.keys(data).length;
     elBackup.disabled = value !== "" && err;
   });
 
@@ -185,7 +193,7 @@ function init({data:prefs})
       data = JSON.parse(elBackupRestore.value.trim());
     }
     catch (er){}
-    debug.log(restore(data));
+    debug.debug(restore(data));
     backupRestore();
   });
 
@@ -217,7 +225,7 @@ function init({data:prefs})
       data = JSON.parse(contents);
     }
     catch (er){}
-    debug.log(restore(data));
+    debug.debug(restore(data));
     backupRestore();
   });
 
@@ -280,7 +288,7 @@ function init({data:prefs})
 //                 + (i == "version" ? 4 : 0);
       if (er || i == "version")
       {
-        debug.log("skipped", i, "value", data[i], "error code", er, er ? "(" + ["option doesn't exit", "wrong value type", "value out of range"].reduce((a,b,i) => ((er >> i) & 1) ? a += (a ? ", " : "") + b : a, "") + ")" : "");
+        debug.debug("skipped", i, "value", data[i], "error code", er, er ? "(" + ["option doesn't exit", "wrong value type", "value out of range"].reduce((a,b,i) => ((er >> i) & 1) ? a += (a ? ", " : "") + b : a, "") + ")" : "");
         r.error[r.error.length] = i;
         continue;
       }
@@ -347,7 +355,13 @@ function init({data:prefs})
   function enableDisable()
   {
     prefs.expandWindow.input.disabled = prefs.iconAction.value != ACTION_LIST;
-    prefs.expandWindow.input.closest(".row").classList.toggle("hidden", prefs.expandWindow.input.disabled);
+    prefs.expandWindow.input.closest(".row").classList.toggle("disabled", prefs.expandWindow.input.disabled);
+    prefs.tabsScrollFix.input.disabled = prefs.newTabActivate.value != 1;
+    prefs.tabsScrollFix.input.closest(".row").classList.toggle("disabled", prefs.tabsScrollFix.input.disabled);
+    prefs.newTabPageOnly.input.disabled = prefs.newTabActivate.value != 1;
+    prefs.newTabPageOnly.input.closest(".row").classList.toggle("disabled", prefs.newTabPageOnly.input.disabled);
+    prefs.newTabPageSkip.input.disabled = !prefs.newTabActivate.value || prefs.afterClose.value != 1;
+    prefs.newTabPageSkip.input.closest(".row").classList.toggle("disabled", prefs.newTabPageSkip.input.disabled);
   }
 
   function setOption(id, value, save)
@@ -589,10 +603,8 @@ function init({data:prefs})
   /* window handler end */
 
   elExit.addEventListener("click", e => window.close());
-  const elIconActionBox = document.getElementById("iconActionBox");
-  elIconActionBox.parentNode.insertBefore(document.getElementById("iconActionNotes"), elIconActionBox.nextSibling);
   backupRestore(true);
   enableDisable();
   document.body.classList.remove("hide");
-  debug.log("performance", performance.now());
+  debug.debug("performance", performance.now());
 }//init()

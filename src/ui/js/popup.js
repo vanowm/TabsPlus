@@ -4,11 +4,11 @@ let prefs = {},
 function messenger()
 {
   const tab = chrome.tabs.query({active: true, currentWindow: true}).then(tabs => tabs[0]);
-  debug.log("popup messenger");
+  debug.debug("popup messenger");
   const port = chrome.runtime.connect(null, {name: "actionPopup"});
   port.onMessage.addListener((message, _port) =>
   {
-    debug.log("popup onMessage", message);
+    debug.debug("popup onMessage", message);
     switch(message.type)
     {
       case "prefs":
@@ -59,7 +59,7 @@ function init (pref)
       let n = 1;
       for(let i = 0, isMenu, session, option, el, elTitle, num, favicon, title, url; i < sessions.length; i++)
       {
-  debug.log(i, sessions[i]);
+  debug.debug(i, sessions[i]);
         let _t = 0;
         if (sessions[i].window)
         {
@@ -115,7 +115,7 @@ function init (pref)
 
           if (!isMenu || (isMenu && option.querySelector(":hover") === elTitle))
           {
-  debug.log("restore", session.sessionId);
+  debug.debug("restore", session.sessionId);
             chrome.sessions.restore(session.sessionId);
             window.close();
           }
@@ -174,7 +174,7 @@ function init (pref)
   
   document.documentElement.addEventListener("contextmenu", e =>
   {
-    debug.log(e);
+    debug.debug(e);
     if (e.target.closest("#contextMenu"))
       return contextMenuClose(e);
 
@@ -187,13 +187,13 @@ function init (pref)
     if (!contextMenuOption)
       return contextMenuClose();
 
-  debug.log(contextMenuOption);
-  debug.log(e.target.getBoundingClientRect());
+  debug.debug(contextMenuOption);
+  debug.debug(e.target.getBoundingClientRect());
     document.body.setAttribute("contextMenu", contextMenuOption.dataset.sessionId);
     const pos = normalizePosition(e.clientX, e.clientY);
     elContextMenu.style.left = pos.x + "px";
     elContextMenu.style.top = pos.y + "px";
-    debug.log(pos, e.offsetX, e.offsetY);
+    debug.debug(pos, e.offsetX, e.offsetY);
     contextMenuOption.classList.add("highlight");
     elContextMenu.focus();
   });
@@ -207,23 +207,23 @@ function init (pref)
       return;
 
 
-    debug.log(e, contextMenuOption);
+    debug.debug(e, contextMenuOption);
 
-  debug.log(e&&e.target);
-  debug.log(elCopy);
+  debug.debug(e&&e.target);
+  debug.debug(elCopy);
     if (e)
     {
       let close = false;
       if (e.target === elCopy)
       {
-    debug.log(contextMenuOption.dataset.url);
+    debug.debug(contextMenuOption.dataset.url);
         navigator.clipboard.writeText(contextMenuOption.dataset.url);
         close = true;
     //    return;
       }
       else if (e.target === elCopyTitle)
       {
-    debug.log(contextMenuOption.dataset.title);
+    debug.debug(contextMenuOption.dataset.title);
         navigator.clipboard.writeText(contextMenuOption.dataset.title);
         close = true;
     //    return;
@@ -243,7 +243,7 @@ function init (pref)
   document.addEventListener("scroll", contextMenuClose);
   elContextMenu.addEventListener("blur", e =>
   {
-    debug.log("blur", e);
+    debug.debug("blur", e);
   });
   inited = true;
 }

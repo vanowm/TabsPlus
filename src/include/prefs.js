@@ -13,7 +13,7 @@ const prefs = function(name, value)
   {
     const o = {};
     o[name] = value;
-    prefsSave(o, er => debug.log("prefsSave", o, er, chrome.runtime.lastError));
+    prefsSave(o, er => debug.debug("prefsSave", o, er, chrome.runtime.lastError));
   }
   return save;
 };
@@ -33,6 +33,23 @@ Object.defineProperties(prefs, {
       newTabActivate:
       {
         default: 1,
+        group: "newTabActivate",
+        onChange: "newTabActivate"
+      },
+      newTabPageOnly:
+      {
+        default: 0,
+        group: "newTabActivate"
+      },
+      newTabPageSkip: //when new tab created move it to the front of the list
+      {
+        default: 0,
+        group: "newTabActivate"
+      },
+      tabsScrollFix:
+      {
+        default: 0,
+        group: "newTabActivate"
       },
       afterClose:
       {
@@ -78,7 +95,7 @@ Object.defineProperties(prefs, {
 
 function prefsOnChanged(changes, area)
 {
-debug.log("prefsOnChanged", arguments);
+debug.debug("prefsOnChanged", arguments);
   if (area == "sync" && STORAGE !== chrome.storage.sync)
     return;
 
@@ -101,7 +118,7 @@ debug.log("prefsOnChanged", arguments);
 
 function prefsSave(o, callback)
 {
-debug.log(STORAGE === chrome.storage.local, o);
+debug.debug(STORAGE === chrome.storage.local, o);
   if (STORAGE === chrome.storage.local)
     return STORAGE.set(o, callback);
 
@@ -115,8 +132,8 @@ debug.log(STORAGE === chrome.storage.local, o);
     else
       sync[i] = o[i];
   }
-debug.log("local", local);
-debug.log("sync", sync);
+debug.debug("local", local);
+debug.debug("sync", sync);
   if (Object.keys(local).length)
     chrome.storage.local.set(local, callback);
 
@@ -218,22 +235,22 @@ let prefsInited = new Promise((resolve, reject) =>
 
 
 
-  // debug.log(JSON.stringify(prefs.data, null, 2), type);
+  // debug.debug(JSON.stringify(prefs.data, null, 2), type);
   //alert("startup prefs with sync off are overwritten by sync.");
 
     if (type === undefined && prefs.syncSettings && STORAGE !== chrome.storage.sync)
     {
       STORAGE = chrome.storage.sync;
-      chrome.storage.local.set({syncSettings: 1}, res=>res&&debug.log(res));
+      chrome.storage.local.set({syncSettings: 1}, res=>res&&debug.debug(res));
       return STORAGE.get(null, e => prefsInit(e, "sync"));
     }
     else if (type === undefined && !prefs.syncSettings && STORAGE !== chrome.storage.local)
     {
-      chrome.storage.local.set({syncSettings: 0}, res=>res&&debug.log(res));
+      chrome.storage.local.set({syncSettings: 0}, res=>res&&debug.debug(res));
       STORAGE = chrome.storage.local;
       return STORAGE.get(null, e => prefsInit(e, "local"));
     }
-  debug.log(type, local, options);
+  debug.debug(type, local, options);
 
     if (local.length)
     {
@@ -245,50 +262,77 @@ let prefsInited = new Promise((resolve, reject) =>
       save.version = app.version;
     }
 
-  // debug.log(JSON.stringify(prefs.data, null, 2),save, type);
+  // debug.debug(JSON.stringify(prefs.data, null, 2),save, type);
     if (Object.keys(save).length)
-      prefsSave(save, er => debug.log("init prefs", save, er));
+      prefsSave(save, er => debug.debug("init prefs", save, er));
 
     // context menu
     onChange.createContextMenu();
-    const allTabs = chrome.tabs.query({});
-    const aTabs = chrome.tabs.query({active: true});
-    const currentTab = chrome.tabs.query({active: true, currentWindow: true});
-    TABS.loaded.then(async list =>
+    const _allTabs = chrome.tabs.query({});
+    const _activeTabs = chrome.tabs.query({active: true});
+    const _currentTab = chrome.tabs.query({active: true, currentWindow: true});
+    TABS.loaded.then(async data =>
     {
-      list = list.tabsList || [];
-      const activeTabs = await aTabs;
-      const tabs = await allTabs;
-      debug.log(list, tabs);
-      // const uuid = new Map();
-      for(let i = 0; i < tabs.length; i++)
+      const savedTabsList = data.tabsList || [];
+      const allTabs = await _allTabs;
+      debug.debug(savedTabsList, allTabs);
+      const uuidList = new Map();
+      for(let i = 0; i < allTabs.length; i++)
       {
-        const tab = TABS.add(tabs[i], false);
-        // uuid.set(tab.uuid, tab);
+        const tab = TABS.add(allTabs[i], false);
+        const uuidTab = uuidList.get(tab.tabUUID) || [];
+        uuidTab.push(tab);
+        uuidList.set(tab.tabUUID, uuidTab);
       }
-      for(let i = 0; i < list.length; i++)
+      for(let i = 0; i < allTabs.length; i++)
       {
-        let tab = list[i];
-        // if (uuid.has(tab.uuid))
-        //   tab.id = uuid.get(tab.uuid).id;
+        const tab = TABS.find(allTabs[i])
+        if (tab)
+          TABS.setWinUUID(tab);
+      }
+      for(let i = 0; i < savedTabsList.length; i++)
+      {
+        let tab = savedTabsList[i];
+        const uuidTabs = uuidList.get(tab.tabUUID);
+        if (!uuidTabs)
+          continue;
 
+        for(let j = 0; j < uuidTabs.length; j++)
+        {
+          const uuidTab = uuidTabs[j];
+          if (uuidTab.windowUUID === tab.windowUUID)
+          {
+            tab.id = uuidTab.id;
+            tab.windowId = uuidTab.windowId;
+          }
+
+        }
+      }
+      for(let i = 0; i < savedTabsList.length; i++)
+      {
+        let tab = savedTabsList[i];
         const data = TABS.data.get(tab.id);
 
         if (data)
+        {
           tab = TABS.update(data, tab);
-
-        // TABS.add(tab, false);
+          TABS.setUUID(tab);
+          TABS.setWinUUID(tab);
+        }
+        // else
+        //   TABS.add(tab, false);
 
         // const opened = messengerHandler.onConnect.tab && messengerHandler.onConnect.tab.id === tab.id;
         // setIcon(tab, opened);
       }
+      const activeTabs = await _activeTabs;
       for(let i = 0; i < activeTabs.length; i++)
         TABS.add(activeTabs[i], false);
 
       TABS.save();
       TABS.data.forEach(tab => setIcon(tab));
       resolve();
-      const [tab] = await currentTab;
+      const [tab] = await _currentTab;
       setContext(tab);
     });
   } //prefsInit();

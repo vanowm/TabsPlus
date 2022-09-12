@@ -29,6 +29,39 @@
   "newTabActivate_2" : {
     "message" : "Background"
   },
+  "tabsScrollFix": {
+    "message" : "Vertical tabs fix"
+  },
+  "tabsScrollFix_0" : {
+    "message" : "No"
+  },
+  "tabsScrollFix_1" : {
+    "message" : "Yes"
+  },
+  "newTabPageOnly": {
+    "message" : "New tab page only"
+  },
+  "newTabPageOnly_0" : {
+    "message" : "No"
+  },
+  "newTabPageOnly_1" : {
+    "message" : "Yes"
+  },
+  "newTabPageSkip": {
+    "message" : "Skip background \"new tab\""
+  },
+  "newTabPageSkip_desc": {
+    "message" : "When \"Last used tab\" is selected, closing a tab will not active newly created \"new tab\""
+  },
+  "newTabPageSkip_0" : {
+    "message" : "No"
+  },
+  "newTabPageSkip_1" : {
+    "message" : "Yes"
+  },
+  "tabsScrollFix_desc" : {
+    "message" : "If vertical tabs don't scroll to new tab, enable this"
+  },
   "afterClose" : {
     "message" : "After closing open"
   },
@@ -48,7 +81,7 @@
     "message" : "Toolbar button action"
   },
   "iconAction_desc" : {
-    "message" : ""
+    "message" : "These also available via right click"
   },
   "iconAction_0" : {
     "message" : "Default"
