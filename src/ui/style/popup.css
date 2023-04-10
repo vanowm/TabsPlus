@@ -7,7 +7,7 @@ body
 .container
 {
   width: max-content;
-  max-width: 25em;
+  max-width: 65em;
 }
 .menu.option
 {
@@ -150,7 +150,7 @@ body:not([contextMenu]) .option:not(.menu):hover
   padding-left: 1em;
   padding-bottom: 0.2em;
   z-index: 1;
-  width: 24em;
+  width: 63em;
 }
 
 .sub

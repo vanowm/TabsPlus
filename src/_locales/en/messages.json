@@ -51,7 +51,7 @@
     "message" : "Skip background \"new tab\""
   },
   "newTabPageSkip_desc": {
-    "message" : "When \"Last used tab\" is selected, closing a tab will not active newly created \"new tab\""
+    "message" : "When \"Last used tab\" is selected, closing a tab will not active newly created tabs that hasn't been activated yet"
   },
   "newTabPageSkip_0" : {
     "message" : "No"

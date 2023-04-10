@@ -530,7 +530,7 @@ const tabsHandler = {
     if (!prevTab)
       prevTab = tab;
 
-    const url = tab.url || tab.pendingUrl,
+    const url = tab.url || tab.pendingUrl || "",
           match = url.match(/^(chrome|edge):\/\/(newtab)?/i) || [],
           isOptions = new RegExp("^chrome-extension:\/\/" + chrome.runtime.id + "\/.*", "i").exec(url),
           isChrome = match[1],
