@@ -44,6 +44,9 @@
 	"contextMenu_lastUsed": {
 		"message": "Switch to last used tab"
 	},
+	"day": {
+		"message": "d"
+	},
 	"expandWindow": {
 		"message": "Expand windows"
 	},
@@ -55,6 +58,9 @@
 	},
 	"expandWindow_desc": {
 		"message": "Show all tabs of closed window in the \"List of closed tabs popup\""
+	},
+	"hour": {
+		"message": "h"
 	},
 	"iconAction": {
 		"message": "Toolbar button action"
@@ -128,6 +134,12 @@
 	"iconAction_desc": {
 		"message": "These also available via right click on toolbar button"
 	},
+	"minute": {
+		"message": "m"
+	},
+	"month": {
+		"message": "m"
+	},
 	"newTabActivate": {
 		"message": "Open a new tab in"
 	},
@@ -194,8 +206,23 @@
 	"restoreFile": {
 		"message": "Restore from file"
 	},
+	"second": {
+		"message": "s"
+	},
 	"settings": {
 		"message": "Settings"
+	},
+	"showDate": {
+		"message": "Show date"
+	},
+	"showDate_0": {
+		"message": "No"
+	},
+	"showDate_1": {
+		"message": "Yes"
+	},
+	"showDate_desc": {
+		"message": "Show date when tab/window was closed"
 	},
 	"syncSettings": {
 		"message": "Sync settings"
@@ -208,6 +235,9 @@
 	},
 	"syncSettings_desc": {
 		"message": "Sync settings between browsers"
+	},
+	"tab": {
+		"message": "tab"
 	},
 	"tabs": {
 		"message": "tabs"
@@ -224,8 +254,14 @@
 	"tabsScrollFix_desc": {
 		"message": "If vertical tabs don't scroll to new tab, enable this"
 	},
+	"week": {
+		"message": "w"
+	},
 	"window": {
 		"message": "Window"
+	},
+	"year": {
+		"message": "y"
 	}
 
 }

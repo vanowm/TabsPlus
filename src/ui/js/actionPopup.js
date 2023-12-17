@@ -11,6 +11,8 @@ let total = 0;
 let elTemplateOption = null;
 let elTemplateMenu = null;
 let elCopyTitle = null;
+let windowTitleLength = 0;
+let dateLength = 0;
 
 chrome.sessions.onChanged.addListener(() => setTimeout(init, 100));
 
@@ -50,8 +52,17 @@ const messenger = () =>
 
 messenger();
 
+const sTab = chrome.i18n.getMessage("tab");
 const sTabs = chrome.i18n.getMessage("tabs");
 const sWindow = chrome.i18n.getMessage("window");
+const sSecond = chrome.i18n.getMessage("second");
+const sMinute = chrome.i18n.getMessage("minute");
+const sHour = chrome.i18n.getMessage("hour");
+const sDay = chrome.i18n.getMessage("day");
+const sWeek = chrome.i18n.getMessage("week");
+const sMonth = chrome.i18n.getMessage("month");
+const sYear = chrome.i18n.getMessage("year");
+
 const genTemplate = (elContainer, sessions, isWindow) =>
 {
 	let n = 1;
@@ -61,7 +72,6 @@ const genTemplate = (elContainer, sessions, isWindow) =>
 		document.getElementById("empty").textContent = chrome.i18n.getMessage("noHistory");
 		window.addEventListener("click", window.close);
 	}
-
 	for (let i = 0; i < sessions.length; i++)
 	{
 		elContainer.append(getOption({ sessionItem: sessions[i], isWindow, n }));
@@ -69,31 +79,91 @@ const genTemplate = (elContainer, sessions, isWindow) =>
 	}
 };
 
+const relativeDate = date =>
+{
+	const diff = Math.round((Date.now() - new Date(date)) / 1000);
+
+	const minute = 60;
+	const hour = minute * 60;
+	const day = hour * 24;
+	const week = day * 7;
+	const month = day * 30;
+	const year = month * 12;
+
+	if (diff < minute)
+	{
+		return diff + sSecond;
+	}
+	else if (diff < hour)
+	{
+		return Math.floor(diff / minute) + sMinute;
+	}
+	else if (diff < day)
+	{
+		return Math.floor(diff / hour) + sHour;
+	}
+	else if (diff < week)
+	{
+		return week + sDay;
+	}
+	else if (diff < month)
+	{
+		return Math.floor(diff / week) + sWeek;
+	}
+	else if (diff < year)
+	{
+		return Math.floor(diff / month) + sMonth;
+	}
+	return Math.floor(diff / year) + sYear;
+
+	// return new Date(date).toLocaleDateString("sv", { //yy-mm-dd hh:mm:ss
+	// 	year: "numeric",
+	// 	month: "2-digit",
+	// 	day: "2-digit",
+	// 	hour: "2-digit",
+	// 	minute: "2-digit",
+	// 	second: "2-digit",
+	// 	hour12: false,
+	// 	timeZone: "utc"
+	// });
+
+};
 const getOption = ({ sessionItem, isWindow, n }) =>
 {
-	debug.debug(sessionItem);
 	let _total = 0;
 	let session = sessionItem.window;
 	let option;
 	let favicon = "";
 	let tabsCount = 0;
 	let title = "";
+	const index = (isWindow === undefined ? "" : isWindow + ".") + n;
+	const sDate = relativeDate(sessionItem.lastModified * 1000);
 	if (session)
 	{
 		session = sessionItem.window;
 		option = elTemplateMenu.cloneNode(true);
 		_total = total++;
-		genTemplate(option.querySelector(".container"), session.tabs, n);
+		genTemplate(option.querySelector(".container"), session.tabs.map(tab =>
+		{
+			return {lastModified: sessionItem.lastModified, tab};
+		}), n);
 		total = _total;
 		tabsCount = session.tabs.length;
 		_total = tabsCount;
-		option.style.setProperty("--num", _total);
+		option.querySelector(".title").dataset.num = index;
 		const elMenuTitle = option.querySelector(".menuTitle .title");
-		elMenuTitle.textContent = sWindow;
-		elMenuTitle.dataset.num = tabsCount;
-		elMenuTitle.dataset.stringTabs = sTabs;
+		const windowTitle = `${sWindow} (${_total} ${_total > 1 ? sTabs : sTab})`;
+		if (windowTitleLength < windowTitle.length)
+			windowTitleLength = windowTitle.length;
+
+		if (dateLength < sDate.length)
+			dateLength = sDate.length;
+
+		elMenuTitle.textContent = windowTitle;
 		if (prefs.expandWindow.value)
 			option.classList.add("open");
+
+		option.querySelector(".menuTitle .date").textContent = sDate;
 	}
 	else
 	{
@@ -107,14 +177,17 @@ const getOption = ({ sessionItem, isWindow, n }) =>
 		elUrl.title = url;
 		option.title = title;
 	}
-	const index = (isWindow === undefined ? "" : isWindow + ".") + n;
 	// option.querySelector(".num").textContent = index; // (_n ? _n + "|" : "") + n;
 	option.querySelector(".favicon").src = favicon;
-	option.dataset.num = index;
 	for (const s in session)
 		option.dataset[s] = Array.isArray(session[s]) ? session[s].length : session[s];
+
 	const elTitle = option.querySelector(".title");
 	elTitle.textContent = title;
+	option.dataset.num = index;
+	const elDate = option.querySelector(".date");
+	elDate.textContent = sDate;
+	elDate.title = new Date(sessionItem.lastModified * 1000);
 
 	option.addEventListener("click", onClick({ option, isMenu: !!sessionItem.window, elTitle, session }));
 
@@ -137,7 +210,7 @@ const onClick = ({ option, isMenu, elTitle, session }) => evt =>
 		return option.classList.toggle("open");
 
 	const elHover = option.querySelector(":hover");
-	if (!isMenu || (isMenu && (elHover === elTitle || elHover.closest(".title") === elTitle)))
+	if (!isMenu || (isMenu && (elHover === elTitle || elHover.closest(".title") === elTitle || elHover.matches(".date"))))
 	{
 		debug.debug("restore", session.sessionId);
 		chrome.sessions.restore(session.sessionId);
@@ -188,6 +261,7 @@ const contextMenuClose = evt =>
 document.title = chrome.i18n.getMessage("contextMenu_closedTabs");
 const init = pref =>
 {
+	document.body.classList.toggle("no-date", !prefs.showDate.value);
 	if (pref && pref !== "expandWindow")
 		return;
 
@@ -203,6 +277,9 @@ const init = pref =>
 
 		total = 0;
 		genTemplate(elMenu, sessions);
+		document.body.style.setProperty("--window-title-length", windowTitleLength + "ch");
+		document.documentElement.style.setProperty("--date-length", dateLength + "ch");
+
 	});
 
 	const elContextMenu = document.getElementById("contextMenu");
@@ -243,7 +320,6 @@ const init = pref =>
 		}
 		return { x: normalizedX, y: normalizedY };
 	};
-
 	if (inited)
 		return;
 

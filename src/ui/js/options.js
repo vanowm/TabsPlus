@@ -76,13 +76,14 @@ const init = ({ data: prefs }) =>
 	{
 		const d = new Date();
 		const options = {
-			suggestedName: app.name + "_" + _("settings") + "_v" + app.version + "_"
+			suggestedName: `${app.name}_${_("settings")}_v${app.version}_`
 				+ d.getFullYear()
 				+ pad(d.getMonth() + 1)
-				+ pad(d.getDate())
+				+ pad(d.getDate()) + "_"
 				+ pad(d.getHours())
 				+ pad(d.getMinutes())
-				+ pad(d.getSeconds()),
+				+ pad(d.getSeconds())
+				+ ".json",
 			types: [
 				{
 					description: app.name + _("settings"),
@@ -185,14 +186,18 @@ const init = ({ data: prefs }) =>
 
 	const enableDisable = () =>
 	{
-		prefs.expandWindow.input.disabled = prefs.iconAction.value !== ACTION_LIST;
-		prefs.expandWindow.input.closest(".row").classList.toggle("disabled", prefs.expandWindow.input.disabled);
-		prefs.tabsScrollFix.input.disabled = prefs.newTabActivate.value !== 1;
-		prefs.tabsScrollFix.input.closest(".row").classList.toggle("disabled", prefs.tabsScrollFix.input.disabled);
-		prefs.newTabPageOnly.input.disabled = prefs.newTabActivate.value !== 1;
-		prefs.newTabPageOnly.input.closest(".row").classList.toggle("disabled", prefs.newTabPageOnly.input.disabled);
-		prefs.newTabPageSkip.input.disabled = !prefs.newTabActivate.value || prefs.afterClose.value !== 1;
-		prefs.newTabPageSkip.input.closest(".row").classList.toggle("disabled", prefs.newTabPageSkip.input.disabled);
+		const ids = {
+			expandWindow: prefs.iconAction.value !== ACTION_LIST,
+			showDate: prefs.iconAction.value !== ACTION_LIST,
+			tabsScrollFix: 	prefs.newTabActivate.value !== 1,
+			newTabPageOnly: prefs.newTabActivate.value !== 1,
+			newTabPageSkip: !prefs.newTabActivate.value || prefs.afterClose.value !== 1
+		};
+		for(const id in ids)
+		{
+			prefs[id].input.disabled = ids[id];
+			prefs[id].input.closest(".row").classList.toggle("disabled", ids[id]);
+		}
 	};
 
 	const setOption = (id, value, save) =>

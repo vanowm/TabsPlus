@@ -67,6 +67,12 @@ const prefs = Object.defineProperties((name, value) =>
 				default: 0,
 				group: "iconAction"
 			},
+			showDate:
+			{
+				default: 1,
+				group: "iconAction"
+			},
+
 			contextMenu:
 			{
 				default: 0,
@@ -344,8 +350,8 @@ const prefsInited = new Promise(resolve =>
 				return {url: a.url, id: a.id, tabUUID: a.tabUUID, windowUUID: a.windowUUID, a};
 			}));
 			TABS.save();
-			for (const [id, tab] of TABS.tabsData)
-				setIcon(tab);
+			for (const tab of TABS.tabsData)
+				setIcon(tab[1]);
 
 			resolve();
 			const [tab] = await _currentTab;
