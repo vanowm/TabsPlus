@@ -1,610 +1,614 @@
-const $ = id => document.getElementById(id),
-      app = chrome.runtime.getManifest(),
-      _ = chrome.i18n.getMessage;
+debug.debug("options", performance.now());
+
+const $ = id => document.getElementById(id);
+const app = chrome.runtime.getManifest();
+const _ = chrome.i18n.getMessage;
+const Void = () => {};
 
 if (!app.version_name)
-  app.version_name = app.version;
+	app.version_name = app.version;
 
-new Promise((resolve, reject) =>
+new Promise(resolve =>
 {
-  let tags = {
-        app: app,
-        undefined: new Proxy({},
-        {
-          get(obj, name) {return Object.hasOwnProperty.call(obj, name) ? obj[name] : _(name);},
-        })
-      },
-      i18n = (() =>
-      {
-        const i18nRegExp = /\${((\w+)\.)?([^}]+)}/g,
-              i18nRepl = (a,b,c,d) => tags[c][d];
-        return text => text.replace(i18nRegExp, i18nRepl);
-      })();
+	const tags = {
+		app: app,
+		undefined: new Proxy({},
+			{
+				get: (object, name) => (Object.hasOwnProperty.call(object, name) ? object[name] : _(name)),
+			})
+	};
+	const i18n = (() =>
+	{
+		const i18nRegExp = /\${((\w+)\.)?([^}]+)}/g;
+		const i18nRepl = (a, b, c, d) => tags[c][d];
+		return text => text.replace(i18nRegExp, i18nRepl);
+	})();
 
-  (function loop(node)
-  {
-    if (node.attributes)
-      for(let i = 0; i < node.attributes.length; i++)
-        node.attributes[i].value = i18n(node.attributes[i].value);
+	// eslint-disable-next-line prefer-arrow-functions/prefer-arrow-functions
+	(function loop (node)
+	{
+		if (node.attributes)
+			for (let i = 0; i < node.attributes.length; i++)
+				node.attributes[i].value = i18n(node.attributes[i].value);
 
-    if (!node.childNodes.length)
-      node.textContent = i18n(node.textContent);
-    else
-      for(let i = 0; i < node.childNodes.length; i++)
-        loop(node.childNodes[i]);
-  })(document.body.parentNode);
-  resolve();
+		if (node.childNodes.length === 0)
+			node.textContent = i18n(node.textContent);
+		else
+			for (let i = 0; i < node.childNodes.length; i++)
+				loop(node.childNodes[i]);
+	})(document.body.parentNode);
+	resolve();
 });
-
-debug.debug("options", performance.now());
-chrome.runtime.sendMessage(null, {type: "prefs"})
-.then(init)
-.catch(er => debug.trace("options", er, chrome.runtime.onError));
 
 // init({data: {
 //   optWin: {},
 //   iconAction: {},
 //   expandWindow: {options:[]},
 // }});
-function init({data:prefs})
+const init = ({ data: prefs }) =>
 {
-  debug.debug("options init", performance.now());
-  const elOpt = document.querySelector("#options > .table"),
-        template = elOpt.removeChild(elOpt.firstElementChild),
-        elRestore = $("restore"),
-        elReset = $("reset"),
-        elRestoreFile = $("restoreFile"),
-        elBackup = $("backup"),
-        elHeader = $("header"),
-        elOptWin = $("options_window"),
-        elBackupRestore = $("backupRestore"),
-        elOptions = $("options"),
-        elExit = $("exit"),
-        rectExit = elExit.getBoundingClientRect();
+	debug.debug("options init", performance.now());
+	const elOptionsTable = document.querySelector("#options > .table");
+	const elTemplate = elOptionsTable.firstElementChild;
+	elOptionsTable.firstElementChild.remove();
+	const elRestore = $("restore");
+	const elReset = $("reset");
+	const elRestoreFile = $("restoreFile");
+	const elBackup = $("backup");
+	const elHeader = $("header");
+	const elOptWin = $("options_window");
+	const elBackupRestore = $("backupRestore");
+	const elOptions = $("options");
+	const elExit = $("exit");
+	const rectExit = elExit.getBoundingClientRect();
+	// const port = chrome.runtime.connect(null, {name: "options"});
+	// port.onMessage.addListener((message, _port) =>
+	// {
+	//   switch(message.type)
+	//   {
+	//     case "prefChanged":
+	//       setOption(message.name, message.newValue, false);
+	//       break;
 
-  let rectOptWin;
-  for (let o in prefs)
-  {
-    if (!prefs[o].options)
-      continue;
+	//   }
+	// });
+	const backup = async () =>
+	{
+		const d = new Date();
+		const options = {
+			suggestedName: app.name + "_" + _("settings") + "_v" + app.version + "_"
+				+ d.getFullYear()
+				+ pad(d.getMonth() + 1)
+				+ pad(d.getDate())
+				+ pad(d.getHours())
+				+ pad(d.getMinutes())
+				+ pad(d.getSeconds()),
+			types: [
+				{
+					description: app.name + _("settings"),
+					accept: {
+						"*/*": [".json"],
+					},
+				},
+			],
+			excludeAcceptAllOption: true,
+			multiple: false
+		};
+		let fileHandle;
+		try
+		{
+			fileHandle = await window.showSaveFilePicker(options);
+		}
+		catch { return; }
 
-    const group = (prefs[o].group && elOpt.querySelector('[group="' + prefs[o].group + '"]')) || template.cloneNode(false);
-    const row = template.querySelector(".row").cloneNode(true);
-    group.appendChild(row);
+		const writable = await fileHandle.createWritable();
+		await writable.write(JSON.stringify(getBackupData()));
+		await writable.close();
+	};
+	const restore = data =>
+	{
+		const r = { restored: [], error: [] };
+		for (const i in data)
+		{
+			const er = (!prefs[i] && 1)
+				+ (prefs[i] && (typeof (prefs[i].default)) !== typeof (data[i]) ? 2 : 0)
+				+ (prefs[i] && prefs[i].options && !prefs[i].options[data[i]] ? 4 : 0);
+			//                 + (prefs[i] && !prefs[i].options ? 4 : 0)
+			//                 + (i == "version" ? 4 : 0);
+			if (er || i === "version")
+			{
+				// eslint-disable-next-line unicorn/no-array-reduce
+				debug.debug("skipped", i, "value", data[i], "error code", er, er ? "(" + ["option doesn't exit", "wrong value type", "value out of range"].reduce((a, b, i) => (((er >> i) & 1) ? (a += (a ? ", " : "") + b) : a), "") + ")" : "");
+				r.error[r.error.length] = i;
+				continue;
+			}
 
-    if (prefs[o].group)
-    {
-        group.setAttribute("group", prefs[o].group);
-    }
-    row.id = o + "Box";
+			setOption(i, data[i]);
 
-    let cur = prefs[o].value;
-    const isBool = prefs[o].options.length == 2,
-          option = isBool ? document.createElement("input") : row.querySelector("select");
+			r.restored[r.restored.length] = i;
+		}
+		return r;
+	};
 
-    if (cur === undefined || cur < 0 || cur > prefs[o].options.length)
-      cur = prefs[o].default;
+	const reset = () =>
+	{
+		for (const o in prefs)
+		{
+			if (!["version"].includes(o))
+			{
+				prefs[o].value = prefs[o].default;
+				setOption(o, prefs[o].value, o !== "optWin");
+			}
+		}
+		elOptWin.style.width = 0;
+		elOptWin.style.height = 0;
+		elOptWin.classList.remove("maximized");
+		updatePos();
+		savePos();
+	};
 
-    if (isBool)
-    {
-      option.checked = cur ? true : false;
-      option.type = "checkbox";
-      const select = row.querySelector("select");
-      select.parentNode.replaceChild(option, select);
-      row.classList.add("checkbox");
-    }
-    else
-    {
-      row.classList.add("select");
-      debug.debug(prefs);
-      for (let i = 0, elOpt = document.createElement("option"); i < prefs[o].options.length; i++)
-      {
-        const opt = elOpt.cloneNode(true);
-        opt.value = prefs[o].options[i].id;
-        opt.textContent = prefs[o].options[i].name;
-        if (prefs[o].options[i].description)
-          opt.title = prefs[o].options[i].description;
+	const onChange = evt =>
+	{
+		const option = evt.target;
+		const value = ~~(option.type === "checkbox" ? option.checked : option.value);
+		option.classList.toggle("default", value === prefs[option.id].default);
+		prefs[option.id].value = value;
+		let o = {};
+		o[option.id] = value;
+		if (onChange[prefs[option.id].onChange] instanceof Function)
+			onChange[prefs[option.id].onChange](option.id, value);
 
-        const def = prefs[o].map ? prefs[o].map.indexOf(prefs[o].default) : prefs[o].default;
-        if (def == i)
-          opt.className = "default";
+		// eslint-disable-next-line sonarjs/no-small-switch
+		switch (option.id)
+		{
+			case "syncSettings": {
+				o = Object.assign(o, getBackupData());
+				break;
+			}
 
-        option.appendChild(opt);
-      }
-      option.value = cur;
-      option.classList.toggle("default", cur === prefs[o].default);
-    }
-    prefs[o].input = option;
-    option.addEventListener("input", onChange);
-    option.id = o;
-    if (option.selectedOptions)
-      option.title = option.selectedOptions[0].textContent;
+		}
+		if (option.selectedOptions)
+			option.title = option.selectedOptions[0].textContent;
 
-    if (prefs[o].description)
-    {
-      row.title = prefs[o].description;
-    }
-    row.querySelector(".label").textContent = prefs[o].label;
-    elOpt.appendChild(group);
-    row.addEventListener("click", e =>
-    {
-      if (isBool)
-      {
-        if (e.target.classList.contains("label"))
-        {
-          option.focus();
-          option.click();
-        }
-      }
-      else
-      {
-        option.focus();
-      }
-    });
-    if (onChange[prefs[o].onChange] instanceof Function)
-      onChange[prefs[o].onChange](o, cur);
+		for (const i in o)
+		{
+			chrome.runtime.sendMessage(null,
+				{
+					type: "pref",
+					name: i,
+					value: o[i]
+				}, Void);
+		}
+		backupRestore();
+		enableDisable();
+	};
 
-  }//for(o in prefs)
+	const enableDisable = () =>
+	{
+		prefs.expandWindow.input.disabled = prefs.iconAction.value !== ACTION_LIST;
+		prefs.expandWindow.input.closest(".row").classList.toggle("disabled", prefs.expandWindow.input.disabled);
+		prefs.tabsScrollFix.input.disabled = prefs.newTabActivate.value !== 1;
+		prefs.tabsScrollFix.input.closest(".row").classList.toggle("disabled", prefs.tabsScrollFix.input.disabled);
+		prefs.newTabPageOnly.input.disabled = prefs.newTabActivate.value !== 1;
+		prefs.newTabPageOnly.input.closest(".row").classList.toggle("disabled", prefs.newTabPageOnly.input.disabled);
+		prefs.newTabPageSkip.input.disabled = !prefs.newTabActivate.value || prefs.afterClose.value !== 1;
+		prefs.newTabPageSkip.input.closest(".row").classList.toggle("disabled", prefs.newTabPageSkip.input.disabled);
+	};
 
-  window.addEventListener("keydown", e =>
-  {
-    if (e.key == "s" && e.ctrlKey && !e.altKey)
-    {
-      e.preventDefault();
-      backup();
-    }
-  });
+	const setOption = (id, value, save) =>
+	{
+		const elOpt = $(id);
+		if (!elOpt)
+		{
+			if (onChange[prefs[id].onChange] instanceof Function)
+				onChange[prefs[id].onChange](id, value);
 
-  elBackupRestore.addEventListener("input", e =>
-  {
-    debug.debug(e);
-    let data = {},
-        err = false,
-        value = elBackupRestore.value.trim();
-    try
-    {
-      data = JSON.parse(value);
-    }
-    catch (er)
-    {
-      err = true;
-    }
-    let o = getBackupData(),
-        changed = false;
+			if (save || save === undefined)
+			{
+				chrome.runtime.sendMessage(null,
+					{
+						type: "pref",
+						name: id,
+						value: value
+					}, Void);
+			}
+			return;
+		}
+		let changed;
+		if (elOpt.type === "checkbox")
+		{
+			changed = elOpt.checked !== value;
+			elOpt.checked = value;
+		}
+		else
+		{
+			changed = elOpt.value !== value;
+			elOpt.value = value;
+		}
+		if (changed)
+			elOpt.dispatchEvent(new Event("input"));
+	};
 
-    for(let i in o)
-    {
-      if (i in data && o[i] !== data[i])
-      {
-        changed = true;
-        break;
-      }
-    }
-    e.target.classList.toggle("error", value !== "" && err);
-    elRestore.disabled = err || !changed || !Object.keys(data).length;
-    elBackup.disabled = value !== "" && err;
-  });
+	const getBackupData = () =>
+	{
+		const o = {};
+		for (const i in prefs)
+			o[i] = prefs[i].value;
 
-  elRestore.addEventListener("click", e =>
-  {
-    let data = {};
-    try
-    {
-      data = JSON.parse(elBackupRestore.value.trim());
-    }
-    catch (er){}
-    debug.debug(restore(data));
-    backupRestore();
-  });
+		return o;
+	};
 
-  elReset.addEventListener("click", reset);
-  elRestoreFile.addEventListener("click", async e =>
-  {
-    const opts = {
-      types: [{
-        description: app.name + " " + _("settings"),
-        accept: {
-          'text/json': ['.json']
-        },
-      }],
-      excludeAcceptAllOption: true,
-      multiple: false
-    };
-    let fileHandle;
-    try
-    {
-      [fileHandle] = await window.showOpenFilePicker(opts);
-    }
-    catch(er){return;}
-    file = await fileHandle.getFile();
-    contents = await file.text();
+	const backupRestore = isInit =>
+	{
+		const value = JSON.stringify(getBackupData());
+		if (elBackupRestore.value !== value)
+		{
+			// debug.trace(init, JSON.stringify(getBackupData()));
+			// when value changed, undo removed
+			if (isInit)
+				elBackupRestore.value = value;
+			else
+			{
+				// add ability undo directly in the textarea when options changed
+				const active = document.activeElement;
+				elBackupRestore.focus();
+				elBackupRestore.select();
+				window.document.execCommand("insertText", false, value);
+				active.focus();
+			}
+		}
+		elBackupRestore.classList.remove("error");
+		elRestore.disabled = true;
+		elBackup.disabled = false;
+	};
 
-    let data = {};
-    try
-    {
-      data = JSON.parse(contents);
-    }
-    catch (er){}
-    debug.debug(restore(data));
-    backupRestore();
-  });
+	/* window handler */
+	const onMouseMove = evt =>
+	{
+		if (!win.move)
+			return;
 
-  elBackup.addEventListener("click", backup);
+		if (elOptWin.classList.contains("maximized"))
+		{
+			const x = rectOptWin.x + win.offsetX; //get orig cursor position
+			const y = rectOptWin.y + win.offsetY;
 
-  // const port = chrome.runtime.connect(null, {name: "options"});
-  // port.onMessage.addListener((message, _port) =>
-  // {
-  //   switch(message.type)
-  //   {
-  //     case "prefChanged":
-  //       setOption(message.name, message.newValue, false);
-  //       break;
-  
-  //   }
-  // });
-  async function backup(e)
-  {
-    const d = new Date(),
-          pad = t => ("" + t).padStart(2, "0"),
-          options = {
-            suggestedName: app.name + "_" + _("settings") + "_v" + app.version + "_"
-                            + d.getFullYear()
-                            + pad(d.getMonth() + 1)
-                            + pad(d.getDate())
-                            + pad(d.getHours())
-                            + pad(d.getMinutes())
-                            + pad(d.getSeconds()),
-            types: [
-              {
-                description: app.name + _("settings"),
-                accept: {
-                  '*/*': ['.json'],
-                },
-              },
-            ],
-            excludeAcceptAllOption: true,
-            multiple: false
-          };
-    let fileHandle;
-    try
-    {
-      fileHandle = await window.showSaveFilePicker(options);
-    }
-    catch(er){return;}
+			if (x === evt.x && y === evt.y)
+				return;
 
-    const writable = await fileHandle.createWritable();
-    await writable.write(JSON.stringify(getBackupData()));
-    await writable.close();
-  }
-  function restore(data)
-  {
-    const r = {restored:[], error:[]};
-    for(let i in data)
-    {
-      const er = (!prefs[i] && 1)
-               + (prefs[i] && (typeof(prefs[i].default)) != typeof(data[i]) ? 2 : 0)
-               + (prefs[i] && prefs[i].options && !prefs[i].options[data[i]] ? 4 : 0);
-//                 + (prefs[i] && !prefs[i].options ? 4 : 0)
-//                 + (i == "version" ? 4 : 0);
-      if (er || i == "version")
-      {
-        debug.debug("skipped", i, "value", data[i], "error code", er, er ? "(" + ["option doesn't exit", "wrong value type", "value out of range"].reduce((a,b,i) => ((er >> i) & 1) ? a += (a ? ", " : "") + b : a, "") + ")" : "");
-        r.error[r.error.length] = i;
-        continue;
-      }
+			const p = x * 100 / rectOptWin.width;
+			elOptWin.style.top = 0;
+			elOptWin.classList.remove("maximized");
+			rectOptWin = elOptWin.getBoundingClientRect();
+			const newX = p * rectOptWin.width / 100;
+			elOptWin.style.left = newX + "px";
+			rectOptWin = elOptWin.getBoundingClientRect();
+			win.offsetX = x - newX - (x >= rectOptWin.right - rectExit.width ? x - (rectOptWin.right - rectExit.width - 2) : 0);
+		}
+		let x = Math.max(evt.x - win.offsetX, 0);
+		let y = Math.max(evt.y - win.offsetY, 0);
 
-      setOption(i, data[i]);
+		if (rectOptWin.width > win.rectBody.width)
+		{
+			elOptWin.style.width = win.rectBody.width + "px";
+			rectOptWin.width = win.rectBody.width;
+		}
 
-      r.restored[r.restored.length] = i;
-    }
-    return r;
-  }
+		if (rectOptWin.height > win.rectBody.height)
+		{
+			elOptWin.style.height = win.rectBody.height + "px";
+			rectOptWin.height = win.rectBody.height;
+		}
 
-  function reset()
-  {
-    for(let o in prefs)
-    {
-      if (!["version"].includes(o))
-      {
-        prefs[o].value = prefs[o].default;
-        setOption(o, prefs[o].value, o != "optWin");
-      }
-    }
-    elOptWin.style.width = 0;
-    elOptWin.style.height = 0;
-    elOptWin.classList.remove("maximized");
-    updatePos();
-    savePos();
-  }
+		if (x + rectOptWin.width > win.rectBody.width)
+			x = win.rectBody.width - rectOptWin.width;
 
-  function onChange(e)
-  {
-    const option = e.target;
-    const value = ~~(option.type == "checkbox" ? option.checked : option.value);
-    option.classList.toggle("default", value == prefs[option.id].default);
-    prefs[option.id].value = value;
-    let o = {};
-    o[option.id] = value;
-    if (onChange[prefs[option.id].onChange] instanceof Function)
-      onChange[prefs[option.id].onChange](option.id, value);
+		if (y + rectOptWin.height > win.rectBody.height)
+			y = win.rectBody.height - rectOptWin.height;
 
+		if (x === rectOptWin.x && y === rectOptWin.y)
+			return;
 
-    switch(option.id)
-    {
-      case "syncSettings":
-        o = Object.assign(o, getBackupData());
-        break;
+		elOptWin.style.left = x + "px";
+		elOptWin.style.top = y + "px";
+		savePos();
+	};
 
-    }
-    if (option.selectedOptions)
-      option.title = option.selectedOptions[0].textContent;
+	const onMouseDown = evt =>
+	{
+		if (evt.target === elExit)// || elOptWin.classList.contains("maximized"))
+			return;
 
-    for(let i in o)
-    {
-      chrome.runtime.sendMessage(null,
-      {
-        type: "pref",
-        name: i,
-        value: o[i]
-      }, resp => {});
-    }
-    backupRestore();
-    enableDisable();
-  }
+		win.move = true;
+		rectOptWin = elOptWin.getBoundingClientRect();
+		win.rectBody = document.body.getBoundingClientRect();
+		win.offsetX = evt.x - rectOptWin.x;
+		win.offsetY = evt.y - rectOptWin.y;
+		evt.stopPropagation();
+	};
 
-  function enableDisable()
-  {
-    prefs.expandWindow.input.disabled = prefs.iconAction.value != ACTION_LIST;
-    prefs.expandWindow.input.closest(".row").classList.toggle("disabled", prefs.expandWindow.input.disabled);
-    prefs.tabsScrollFix.input.disabled = prefs.newTabActivate.value != 1;
-    prefs.tabsScrollFix.input.closest(".row").classList.toggle("disabled", prefs.tabsScrollFix.input.disabled);
-    prefs.newTabPageOnly.input.disabled = prefs.newTabActivate.value != 1;
-    prefs.newTabPageOnly.input.closest(".row").classList.toggle("disabled", prefs.newTabPageOnly.input.disabled);
-    prefs.newTabPageSkip.input.disabled = !prefs.newTabActivate.value || prefs.afterClose.value != 1;
-    prefs.newTabPageSkip.input.closest(".row").classList.toggle("disabled", prefs.newTabPageSkip.input.disabled);
-  }
+	const onMouseUp = () =>
+	{
+		win.move = false;
+	};
 
-  function setOption(id, value, save)
-  {
-    const elOpt = $(id);
-    if (!elOpt)
-    {
-      if (onChange[prefs[id].onChange] instanceof Function)
-        onChange[prefs[id].onChange](id, value);
+	const savePos = () =>
+	{
+		win.rectBody = document.body.getBoundingClientRect();
+		const position = [
+			~~(elOptWin.style.left ? Number.parseFloat(elOptWin.style.left) : rectOptWin.left),
+			~~(elOptWin.style.top ? Number.parseFloat(elOptWin.style.top) : rectOptWin.top),
+			~~(elOptWin.style.width ? Number.parseFloat(elOptWin.style.width) : rectOptWin.width),
+			~~(elOptWin.style.height ? Number.parseFloat(elOptWin.style.height) : rectOptWin.height),
+			~~elOptWin.classList.contains("maximized")];
 
-      if (save || save === undefined)
-      {
-        chrome.runtime.sendMessage(null,
-        {
-          type: "pref",
-          name: id,
-          value: value
-        }, resp => {});
-      }
-      return;
-    }
-    let changed;
-    if (elOpt.type == "checkbox")
-    {
-      changed = elOpt.checked != value;
-      elOpt.checked = value;
-    }
-    else
-    {
-      changed = elOpt.value != value;
-      elOpt.value = value;
-    }
-    if (changed)
-      elOpt.dispatchEvent(new Event("input"));
-  }
- 
-  function getBackupData()
-  {
-    const o = {};
-    for(let i in prefs)
-      o[i] = prefs[i].value;
+		const optWinPrevious = "" + prefs.optWin.value;
+		prefs.optWin.value = position;
 
-    return o;
-  }
+		if (!savePos.timer)
+		{
+			const time = 500;
+			let i = -1;
+			// eslint-disable-next-line prefer-arrow-functions/prefer-arrow-functions
+			(function loop ()
+			{
+				if (!savePos.timer)
+					savePos.timer = setInterval(loop, 100);
 
-  function backupRestore(init)
-  {
-    const value = JSON.stringify(getBackupData());
-    if (elBackupRestore.value !== value)
-    {
-      // debug.trace(init, JSON.stringify(getBackupData()));
-      // when value changed, undo removed
-      if (init)
-        elBackupRestore.value = value;
-      else
-      {
-        // add ability undo directly in the textarea when options changed
-        const active = document.activeElement;
-        elBackupRestore.focus();
-        elBackupRestore.select();
-        window.document.execCommand('insertText', false, value);
-        active.focus();
-      }
-    }
-    elBackupRestore.classList.remove("error");
-    elRestore.disabled = true;
-    elBackup.disabled = false;
-  }
+				if ("" + savePos.optWin === "" + prefs.optWin.value)
+				{
+					clearInterval(savePos.timer);
+					savePos.timer = null;
+					savePos.optWin = null;
+					i = time;
+				}
+				else
+					savePos.optWin = prefs.optWin.value;
 
-  /* window handler */
-  function onMouseMove(e)
-  {
-  	if (!win.move)
-  		return;
+				if (++i > time || !i)
+				{
+					i = 0;
+					if ("" + prefs.optWin.value !== "" + savePos.optWin && "" + prefs.optWin.value !== optWinPrevious)
+					{
+						chrome.runtime.sendMessage(null,
+							{
+								type: "pref",
+								name: "optWin",
+								value: prefs.optWin.value
+							}, () =>
+							{
+								backupRestore();
+							});
+					}
+					else
+						backupRestore();
 
-    if (elOptWin.classList.contains("maximized"))
-    {
-      let x = rectOptWin.x + win.offsetX, //get orig cursor position
-          y = rectOptWin.y + win.offsetY;
+				}
+			})();
+		}
+	};
 
-      if (x == e.x && y == e.y)
-        return;
+	const updatePos = (position = prefs.optWin.value) =>
+	{
+		if (!Array.isArray(position))
+			position = [];
 
-      let p = x * 100 / rectOptWin.width;
-      elOptWin.style.top = 0;
-      elOptWin.classList.remove("maximized");
-      rectOptWin = elOptWin.getBoundingClientRect();
-      const newX = p * rectOptWin.width / 100;
-      elOptWin.style.left = newX + "px";
-      rectOptWin = elOptWin.getBoundingClientRect();
-      win.offsetX = x - newX - (x >= rectOptWin.right - rectExit.width ? x - (rectOptWin.right - rectExit.width - 2) : 0);
-    }
-    let x = Math.max(e.x - win.offsetX, 0),
-        y = Math.max(e.y - win.offsetY, 0);
+		rectOptWin = elOptWin.getBoundingClientRect();
+		win.rectBody = document.body.getBoundingClientRect();
+		elOptWin.style.left = (win.rectBody.width - rectOptWin.width) / 2 + "px";
+		elOptWin.style.top = (win.rectBody.height - rectOptWin.height) / 2 + "px";
+		// eslint-disable-next-line prefer-const
+		let [winX, winY, winW, winH, winM] = position;
+		winW = Math.max(~~winW, rectOptWin.width);
+		winH = Math.max(~~winH, rectOptWin.height);
+		elOptWin.style.left = Math.max(0, Math.min(win.rectBody.width - winW, winX)) + "px";
+		elOptWin.style.top = Math.max(0, (winY + winH > win.rectBody.height ? win.rectBody.height - winH : winY)) + "px";
+		elOptWin.style.width = winW + "px";
+		elOptWin.style.height = winH + "px";
+		elOptWin.classList.toggle("maximized", Boolean(winM));
+	};
 
-    if (rectOptWin.width > win.rectBody.width)
-    {
-    	elOptWin.style.width = win.rectBody.width + "px";
-      rectOptWin.width = win.rectBody.width;
-    }
+	const win = {
+		heightDif: elOptWin.scrollHeight - elOptions.scrollHeight,
+		textAreaDif: elOptWin.scrollHeight - elBackupRestore.scrollHeight,
+		move: false,
+	};
 
-    if (rectOptWin.height > win.rectBody.height)
-    {
-    	elOptWin.style.height = win.rectBody.height + "px";
-      rectOptWin.height = win.rectBody.height;
-    }
+	let rectOptWin;
+	for (const prefId in prefs)
+	{
+		if (!prefs[prefId].options)
+			continue;
 
-    if (x + rectOptWin.width > win.rectBody.width)
-      x = win.rectBody.width - rectOptWin.width;
+		const group = (prefs[prefId].group && elOptionsTable.querySelector('[group="' + prefs[prefId].group + '"]')) || elTemplate.cloneNode(false);
+		const row = elTemplate.querySelector(".row").cloneNode(true);
+		group.append(row);
 
-    if (y + rectOptWin.height > win.rectBody.height)
-      y = win.rectBody.height - rectOptWin.height;
+		if (prefs[prefId].group)
+		{
+			group.setAttribute("group", prefs[prefId].group);
+		}
+		row.id = prefId + "Box";
 
+		let value = prefs[prefId].value;
+		const isBool = prefs[prefId].options.length === 2;
+		const elOption = isBool ? document.createElement("input") : row.querySelector("select");
 
-    if (x == rectOptWin.x && y == rectOptWin.y)
-      return;
+		if (value === undefined || value < 0 || value > prefs[prefId].options.length)
+			value = prefs[prefId].default;
 
-  	elOptWin.style.left = x + "px";
-  	elOptWin.style.top = y + "px";
-  	savePos();
-  }
+		if (isBool)
+		{
+			elOption.checked = value ? true : false;
+			elOption.type = "checkbox";
+			const elSelect = row.querySelector("select");
+			elSelect.parentNode.replaceChild(elOption, elSelect);
+			row.classList.add("checkbox");
+		}
+		else
+		{
+			row.classList.add("select");
+			debug.debug(prefs);
+			for (let i = 0, elOptTemplate = document.createElement("option"); i < prefs[prefId].options.length; i++)
+			{
+				const elOpt = elOptTemplate.cloneNode(true);
+				elOpt.value = prefs[prefId].options[i].id;
+				elOpt.textContent = prefs[prefId].options[i].name;
+				if (prefs[prefId].options[i].description)
+					elOpt.title = prefs[prefId].options[i].description;
 
-  function onMouseDown(e)
-  {
-    if (e.target === elExit)// || elOptWin.classList.contains("maximized"))
-      return;
+				const defaultValue = prefs[prefId].map ? prefs[prefId].map.indexOf(prefs[prefId].default) : prefs[prefId].default;
+				if (defaultValue === i)
+					elOpt.className = "default";
 
-    win.move = true;
-    rectOptWin = elOptWin.getBoundingClientRect();
-    win.rectBody = document.body.getBoundingClientRect();
-  	win.offsetX = e.x - rectOptWin.x;
-  	win.offsetY = e.y - rectOptWin.y;
-  	e.stopPropagation();
-  }
+				elOption.append(elOpt);
+			}
+			elOption.value = value;
+			elOption.classList.toggle("default", value === prefs[prefId].default);
+		}
+		prefs[prefId].input = elOption;
+		elOption.addEventListener("input", onChange);
+		elOption.id = prefId;
+		if (elOption.selectedOptions)
+			elOption.title = elOption.selectedOptions[0].textContent;
 
-  function onMouseUp(e)
-  {
-    win.move = false;
-  }
+		if (prefs[prefId].description)
+		{
+			row.title = prefs[prefId].description;
+		}
+		row.querySelector(".label").textContent = prefs[prefId].label;
+		elOptionsTable.append(group);
+		row.addEventListener("click", evt =>
+		{
+			if (isBool)
+			{
+				if (evt.target.classList.contains("label"))
+				{
+					elOption.focus();
+					elOption.click();
+				}
+			}
+			else
+			{
+				elOption.focus();
+			}
+		});
+		if (onChange[prefs[prefId].onChange] instanceof Function)
+			onChange[prefs[prefId].onChange](prefId, value);
 
-  function savePos()
-  {
-    win.rectBody = document.body.getBoundingClientRect();
-    const position = [
-      ~~(elOptWin.style.left ? parseFloat(elOptWin.style.left) : rectOptWin.left),
-      ~~(elOptWin.style.top ? parseFloat(elOptWin.style.top) : rectOptWin.top),
-      ~~(elOptWin.style.width ? parseFloat(elOptWin.style.width) : rectOptWin.width),
-      ~~(elOptWin.style.height ? parseFloat(elOptWin.style.height) : rectOptWin.height),
-      ~~elOptWin.classList.contains("maximized")];
+	}//for(o in prefs)
 
-    const optWinPrev = "" + prefs.optWin.value;
-    prefs.optWin.value = position;
-    
-    if (!savePos.timer)
-    {
-      const time = 500;
-      let i = -1;
-      (function loop(e)
-      {
-        if (!savePos.timer)
-          savePos.timer = setInterval(loop, 100);
+	window.addEventListener("keydown", evt =>
+	{
+		if (evt.key === "s" && evt.ctrlKey && !evt.altKey)
+		{
+			evt.preventDefault();
+			backup();
+		}
+	});
 
-        if ("" + savePos.optWin == "" + prefs.optWin.value)
-        {
-          clearInterval(savePos.timer);
-          savePos.timer = null;
-          savePos.optWin = null;
-          i = time;
-        }
-        else
-          savePos.optWin = prefs.optWin.value;
+	elBackupRestore.addEventListener("input", evt =>
+	{
+		debug.debug(evt);
+		let data = {};
+		let error = false;
+		const value = elBackupRestore.value.trim();
+		try
+		{
+			data = JSON.parse(value);
+		}
+		catch
+		{
+			error = true;
+		}
+		const o = getBackupData();
+		let changed = false;
 
-        if (++i > time || !i)
-        {
-          i = 0;
-          if ("" + prefs.optWin.value !== "" + savePos.optWin && "" + prefs.optWin.value !== optWinPrev)
-          {
-            chrome.runtime.sendMessage(null,
-            {
-              type: "pref",
-              name: "optWin",
-              value: prefs.optWin.value
-            }, resp =>
-            {
-              backupRestore();
-            });
-          }
-          else
-            backupRestore();
+		for (const i in o)
+		{
+			if (i in data && o[i] !== data[i])
+			{
+				changed = true;
+				break;
+			}
+		}
+		evt.target.classList.toggle("error", value !== "" && error);
+		elRestore.disabled = error || !changed || Object.keys(data).length === 0;
+		elBackup.disabled = value !== "" && error;
+	});
 
-          return;
-        }
-      })();
-    }
-  }
+	elRestore.addEventListener("click", () =>
+	{
+		let data = {};
+		try
+		{
+			data = JSON.parse(elBackupRestore.value.trim());
+		}
+		catch {}
+		debug.debug(restore(data));
+		backupRestore();
+	});
 
-  function updatePos(position = prefs.optWin.value)
-  {
-    if (!Array.isArray(position))
-      position = [];
+	elReset.addEventListener("click", reset);
+	elRestoreFile.addEventListener("click", async () =>
+	{
+		const options = {
+			types: [{
+				description: app.name + " " + _("settings"),
+				accept: {
+					"text/json": [".json"]
+				},
+			}],
+			excludeAcceptAllOption: true,
+			multiple: false
+		};
+		let fileHandle;
+		try
+		{
+			[fileHandle] = await window.showOpenFilePicker(options);
+		}
+		catch { return; }
+		const file = await fileHandle.getFile();
+		const contents = await file.text();
 
-    rectOptWin = elOptWin.getBoundingClientRect();
-    win.rectBody = document.body.getBoundingClientRect();
-    elOptWin.style.left = (win.rectBody.width - rectOptWin.width) / 2 + "px";
-    elOptWin.style.top = (win.rectBody.height - rectOptWin.height) / 2  + "px";
-    let [winX, winY, winW, winH, winM] = position;
+		let data = {};
+		try
+		{
+			data = JSON.parse(contents);
+		}
+		catch {}
+		debug.debug(restore(data));
+		backupRestore();
+	});
 
-    winW = Math.max(~~winW, rectOptWin.width);
-    winH = Math.max(~~winH, rectOptWin.height);
-    elOptWin.style.left = Math.max(0, Math.min(win.rectBody.width - winW, winX)) + "px";
-    elOptWin.style.top = Math.max(0, (winY + winH > win.rectBody.height ? win.rectBody.height - winH : winY)) + "px";
-    elOptWin.style.width = winW + "px";
-    elOptWin.style.height = winH + "px";
-    elOptWin.classList.toggle("maximized", Boolean(winM));
-  }
+	elBackup.addEventListener("click", backup);
 
+	elOptWin.style.minHeight = elOptions.scrollHeight + win.heightDif + "px";
 
-  const win = {
-    heightDif: elOptWin.scrollHeight - elOptions.scrollHeight,
-    textAreaDif: elOptWin.scrollHeight - elBackupRestore.scrollHeight,
-    move: false,
-  };
+	updatePos();
+	new ResizeObserver(() =>
+	{
+		if (elOptWin.style.height !== "")
+			elOptWin.classList.add("resized");
 
-  elOptWin.style.minHeight = elOptions.scrollHeight + win.heightDif + "px";
+		savePos();
+	}).observe(elOptWin);
 
-  updatePos();
-  new ResizeObserver(e =>
-  {
-    if (elOptWin.style.height !== "")
-      elOptWin.classList.add("resized");
+	elHeader.addEventListener("mousedown", onMouseDown);
+	elHeader.addEventListener("dblclick", () => elOptWin.classList.toggle("maximized"));
+	document.addEventListener("mousemove", onMouseMove);
+	document.addEventListener("mouseup", onMouseUp);
+	/* window handler end */
 
-    savePos();
-  }).observe(elOptWin);
+	elExit.addEventListener("click", () => window.close());
+	backupRestore(true);
+	enableDisable();
+	document.body.classList.remove("hide");
+	debug.debug("performance", performance.now());
+};//init()
 
-  elHeader.addEventListener("mousedown", onMouseDown);
-  elHeader.addEventListener("dblclick", e => elOptWin.classList.toggle("maximized"));
-  document.addEventListener("mousemove", onMouseMove);
-  document.addEventListener("mouseup", onMouseUp);
-  /* window handler end */
+const pad = t => ("" + t).padStart(2, "0");
 
-  elExit.addEventListener("click", e => window.close());
-  backupRestore(true);
-  enableDisable();
-  document.body.classList.remove("hide");
-  debug.debug("performance", performance.now());
-}//init()
+chrome.runtime.sendMessage(null, { type: "prefs" })
+	.then(init)
+	.catch(error => debug.trace("options", error, chrome.runtime.onError));

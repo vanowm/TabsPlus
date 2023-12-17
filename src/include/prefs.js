@@ -1,344 +1,360 @@
 let STORAGE = chrome.storage.sync;
-const prefs = function(name, value)
+const prefs = Object.defineProperties((name, value) =>
 {
-  if (value === undefined)
-    return prefs[name];
+	if (value === undefined)
+		return prefs[name];
 
-  if (prefs[name] === undefined)
-    return;
+	if (prefs[name] === undefined)
+		return;
 
-  const save = prefs[name];
-  prefs.data[name].value = value;
-  if (save !== value)
-  {
-    const o = {};
-    o[name] = value;
-    prefsSave(o, er => debug.debug("prefsSave", o, er, chrome.runtime.lastError));
-  }
-  return save;
-};
+	const save = prefs[name];
+	prefs.data[name].value = value;
+	if (save !== value)
+	{
+		const o = {};
+		o[name] = value;
+		prefsSave(o, er => debug.debug("prefsSave", o, er, chrome.runtime.lastError));
+	}
+	return save;
+},
+{
+	data:
+	{
+		configurable: false,
+		enumerable: false,
+		// writable: false,
+		value:
+		{
+			newTabPosition:
+			{
+				default: 0,
+			},
+			newTabActivate:
+			{
+				default: 1,
+				group: "newTabActivate",
+				onChange: "newTabActivate"
+			},
+			newTabPageOnly:
+			{
+				default: 0,
+				group: "newTabActivate"
+			},
+			newTabPageSkip: //when new tab created move it to the front of the list
+			{
+				default: 0,
+				group: "newTabActivate"
+			},
+			tabsScrollFix:
+			{
+				default: 0,
+				group: "newTabActivate"
+			},
+			afterClose:
+			{
+				default: 1,
+			},
+			iconAction:
+			{
+				default: ACTION_LIST,
+				onChange: "iconActionChanged",
+				group: "iconAction",
+				map: [0, ACTION_LIST, ACTION_UNDO, ACTION_SKIP, ACTION_UNLOAD_TAB, ACTION_UNLOAD_WINDOW, ACTION_UNLOAD_ALL],
+				valid: [0, ACTION_UNDO, ACTION_SKIP, ACTION_LIST, ACTION_UNLOAD_TAB, ACTION_UNLOAD_WINDOW, ACTION_UNLOAD_ALL]
+			},
+			expandWindow:
+			{
+				default: 0,
+				group: "iconAction"
+			},
+			contextMenu:
+			{
+				default: 0,
+				onChange: "createContextMenu",
+			},
 
-Object.defineProperties(prefs, {
-  data:
-  {
-    configurable: false,
-    enumerable: false,
-  //  writable: false,
-    value:
-    {
-      newTabPosition:
-      {
-        default: 0,
-      },
-      newTabActivate:
-      {
-        default: 1,
-        group: "newTabActivate",
-        onChange: "newTabActivate"
-      },
-      newTabPageOnly:
-      {
-        default: 0,
-        group: "newTabActivate"
-      },
-      newTabPageSkip: //when new tab created move it to the front of the list
-      {
-        default: 0,
-        group: "newTabActivate"
-      },
-      tabsScrollFix:
-      {
-        default: 0,
-        group: "newTabActivate"
-      },
-      afterClose:
-      {
-        default: 1,
-      },
-      iconAction:
-      {
-        default: ACTION_LIST,
-        onChange: "iconActionChanged",
-        group: "iconAction",
-        map: [0, ACTION_LIST, ACTION_UNDO, ACTION_SKIP, ACTION_UNLOAD_TAB, ACTION_UNLOAD_WINDOW, ACTION_UNLOAD_ALL],
-        valid: [0, ACTION_UNDO, ACTION_SKIP, ACTION_LIST, ACTION_UNLOAD_TAB, ACTION_UNLOAD_WINDOW, ACTION_UNLOAD_ALL]
-      },
-      expandWindow:
-      {
-        default: 0,
-        group: "iconAction"
-      },
-      contextMenu:
-      {
-        default: 0,
-        onChange: "createContextMenu",
-      },
-
-      // syncSettings:
-      // {
-      //   default: 1,
-      // },
-      optWin:
-      {
-        noSync: true,
-        default: []
-      },
-      version:
-      {
-        noSync: true,
-        default: ""
-      }
-    }
-  }
+			// syncSettings:
+			// {
+			//   default: 1,
+			// },
+			optWin:
+			{
+				noSync: true,
+				default: []
+			},
+			version:
+			{
+				noSync: true,
+				default: ""
+			}
+		}
+	}
 });
 
-
-function prefsOnChanged(changes, area)
+function prefsOnChanged (changes, area)
 {
-debug.debug("prefsOnChanged", arguments);
-  if (area == "sync" && STORAGE !== chrome.storage.sync)
-    return;
+	debug.debug("prefsOnChanged", arguments);
+	// STORAGE.get(null, (...args) => debug.log("prefs", args));
+	if (area === "sync" && STORAGE !== chrome.storage.sync)
+		return;
 
-  for (let o in changes)
-  {
-    if (!prefs.data[o])
-      continue;
+	for (const o in changes)
+	{
+		if (!prefs.data[o])
+			continue;
 
-    if (onChange[prefs.data[o].onChange] instanceof Function)
-      onChange[prefs.data[o].onChange](o, changes[o].newValue, changes[o].oldValue);
+		if (contextMenu[prefs.data[o].onChange] instanceof Function)
+			contextMenu[prefs.data[o].onChange](o, changes[o].newValue, changes[o].oldValue);
 
-    messenger({
-      type: "prefChanged",
-      name: o,
-      newValue: changes[o].newValue,
-      oldValue: changes[o].oldValue
-    });
-  }
+		messenger({
+			type: "prefChanged",
+			name: o,
+			newValue: changes[o].newValue,
+			oldValue: changes[o].oldValue
+		});
+	}
 }
 
-function prefsSave(o, callback)
+const prefsSave = (o, callback) =>
 {
-debug.debug(STORAGE === chrome.storage.local, o);
-  if (STORAGE === chrome.storage.local)
-    return STORAGE.set(o, callback);
+	debug.debug(STORAGE === chrome.storage.local, o);
+	if (STORAGE === chrome.storage.local)
+		return STORAGE.set(o, callback);
 
-  const local = {},
-        sync = {};
+	const local = {};
+	const sync = {};
 
-  for(let i in o)
-  {
-    if (prefs.data[i].noSync || i == "syncSettings")
-      local[i] = o[i];
-    else
-      sync[i] = o[i];
-  }
-debug.debug("local", local);
-debug.debug("sync", sync);
-  if (Object.keys(local).length)
-    chrome.storage.local.set(local, callback);
+	for(const i in o)
+	{
+		if (prefs.data[i].noSync || i === "syncSettings")
+			local[i] = o[i];
+		else
+			sync[i] = o[i];
+	}
+	debug.debug("local", local);
+	debug.debug("sync", sync);
+	if (Object.keys(local).length > 0)
+		chrome.storage.local.set(local, callback);
 
-  if (Object.keys(sync).length)
-    chrome.storage.sync.set(sync, callback);
-}
+	if (Object.keys(sync).length > 0)
+		chrome.storage.sync.set(sync, callback);
+};
 
-let prefsInited = new Promise((resolve, reject) =>
+// eslint-disable-next-line no-unused-vars
+const prefsInited = new Promise(resolve =>
 {
-  //options
+	//options
 
-  function prefsInit(options, type)
-  {
-    const save = {};
+	const prefsInit = (options, type) =>
+	{
+		const save = {};
 
-    for (let i in prefs.data)
-    {
+		for (const i in prefs.data)
+		{
 
-      let d = chrome.i18n.getMessage(i),
-          n = 0,
-          valid = prefs.data[i].valid || [];
+			const label = chrome.i18n.getMessage(i);
+			const description = chrome.i18n.getMessage(i + "_desc");
+			const valid = prefs.data[i].valid || [];
 
-      if (d)
-        prefs.data[i].label = d;
-      
-      d = chrome.i18n.getMessage(i + "_desc");
-      if (d)
-        prefs.data[i].description = d;
+			if (label)
+				prefs.data[i].label = label;
 
-      if (!valid.length)
-      {
-        do
-        {
-          d = chrome.i18n.getMessage(i + "_" + n);
-          if (d)
-            valid[valid.length] = n;
+			if (description)
+				prefs.data[i].description = description;
 
-          n++;
-        }
-        while(d);
-      }
-      const map = prefs.data[i].map;
-      for(let n = 0; n < valid.length; n++)
-      {
-        d = chrome.i18n.getMessage(i + "_" + n);
-        if (!d)
-          continue;
+			if (valid.length === 0)
+			{
+				let n = 0;
+				let validValue;
+				do
+				{
+					validValue = chrome.i18n.getMessage(i + "_" + n);
+					if (validValue)
+						valid[valid.length] = validValue;
 
-        if (!prefs.data[i].options)
-          prefs.data[i].options = [];
+					n++;
+				}
+				while(validValue);
+			}
+			const map = prefs.data[i].map;
+			for(let j = 0; j < valid.length; j++)
+			{
+				const name = chrome.i18n.getMessage(i + "_" + j);
+				if (!name)
+					continue;
 
-        const index = map ? map.indexOf(n) : n;
-        prefs.data[i].options[index] = {id: n, name: d, description: chrome.i18n.getMessage(i + "_" + n + "_desc")};
-      }
-    }
-    const remove = [];
-    for (let i in options)
-    {
-      if (prefs.data[i] && typeof prefs.data[i].default == typeof options[i])
-        prefs.data[i].value = options[i];
-      else
-        remove[remove.length] = i;
-    }
+				if (!prefs.data[i].options)
+					prefs.data[i].options = [];
 
-    if (remove.length)
-      STORAGE.remove(remove);
+				const index = map ? map.indexOf(j) : j;
+				prefs.data[i].options[index] = {id: j, name, description: chrome.i18n.getMessage(i + "_" + j + "_desc")};
+			}
+		}
+		const remove = [];
+		for (const id in options)
+		{
+			if (prefs.data[id] && typeof prefs.data[id].default === typeof options[id])
+				prefs.data[id].value = options[id];
+			else
+				remove[remove.length] = id;
+		}
 
-    const local = [];
-    for (let i in prefs.data)
-    {
-      if (prefs.data[i].noSync && type == "sync")
-      {
-  //      delete prefs.data[i];
-        local[local.length] = i;
-        continue;
-      }
-      if (prefs.data[i].value === undefined)
-        prefs.data[i].value = save[i] = prefs.data[i].default;
+		if (remove.length > 0)
+			STORAGE.remove(remove);
 
-      try
-      {
-        const n = i;
-        Object.defineProperty(prefs, i,
-        {
-          enumerable: true,
-          configurable: false,
-          get()
-          {
-            return this.data[n].value;
-          },
-          set(val)
-          {
-            this(n, val);
-          }
-        });
-      }catch(er){}
-    }
+		const local = [];
+		for (const id in prefs.data)
+		{
+			if (prefs.data[id].noSync && type === "sync")
+			{
+				//      delete prefs.data[i];
+				local[local.length] = id;
+				continue;
+			}
+			if (prefs.data[id].value === undefined)
+			{
+				save[id] = prefs.data[id].default;
+				prefs.data[id].value = save[id];
+			}
 
+			try
+			{
+				const n = id;
+				Object.defineProperty(prefs, id,
+					{
+						enumerable: true,
+						configurable: false,
+						get ()
+						{
+							return this.data[n].value;
+						},
+						set (value)
+						{
+							this(n, value);
+						}
+					});
+			}
+			catch{}
+		}
 
+		// debug.debug(JSON.stringify(prefs.data, null, 2), type);
+		//alert("startup prefs with sync off are overwritten by sync.");
 
+		if (type === undefined && prefs.syncSettings && STORAGE !== chrome.storage.sync)
+		{
+			STORAGE = chrome.storage.sync;
+			chrome.storage.local.set({syncSettings: 1}, result => result && debug.debug(result));
+			return STORAGE.get(null, data => prefsInit(data, "sync"));
+		}
+		else if (type === undefined && !prefs.syncSettings && STORAGE !== chrome.storage.local)
+		{
+			chrome.storage.local.set({syncSettings: 0}, result => result && debug.debug(result));
+			STORAGE = chrome.storage.local;
+			return STORAGE.get(null, data => prefsInit(data, "local"));
+		}
+		debug.debug(type, local, options);
 
-  // debug.debug(JSON.stringify(prefs.data, null, 2), type);
-  //alert("startup prefs with sync off are overwritten by sync.");
+		if (local.length > 0)
+		{
+			chrome.storage.local.get(local, data => prefsInit(data, "local"));
+			return;
+		}
+		if (APP.version !== prefs.version)
+		{
+			save.version = APP.version;
+		}
 
-    if (type === undefined && prefs.syncSettings && STORAGE !== chrome.storage.sync)
-    {
-      STORAGE = chrome.storage.sync;
-      chrome.storage.local.set({syncSettings: 1}, res=>res&&debug.debug(res));
-      return STORAGE.get(null, e => prefsInit(e, "sync"));
-    }
-    else if (type === undefined && !prefs.syncSettings && STORAGE !== chrome.storage.local)
-    {
-      chrome.storage.local.set({syncSettings: 0}, res=>res&&debug.debug(res));
-      STORAGE = chrome.storage.local;
-      return STORAGE.get(null, e => prefsInit(e, "local"));
-    }
-  debug.debug(type, local, options);
+		// debug.debug(JSON.stringify(prefs.data, null, 2),save, type);
+		if (Object.keys(save).length > 0)
+			prefsSave(save, er => debug.debug("init prefs", save, er));
 
-    if (local.length)
-    {
-      chrome.storage.local.get(local, e => prefsInit(e, "local"));
-      return;
-    }
-    if (app.version != prefs.version)
-    {
-      save.version = app.version;
-    }
+		// context menu
+		contextMenu.createContextMenu();
+		const _allTabs = chrome.tabs.query({});
+		const _activeTabs = chrome.tabs.query({active: true});
+		const _currentTab = chrome.tabs.query({active: true, currentWindow: true});
+		TABS.loaded.then(async data =>
+		{
+			const savedTabsList = data.tabsList || [];
+			const allTabs = await _allTabs;
+			debug.trace(data);
+			debug.debug("TABS.loaded", data.tabsList?.map(a => CLONE(a)), CLONE(data.tabsOrder), data, allTabs);
+			const uuidList = new Map();
+			for(let i = 0; i < allTabs.length; i++)
+			{
+				let tab = TABS.add(allTabs[i], false);
+				const uuidTab = uuidList.get(tab.tabUUID) || [];
+				uuidTab.push(tab);
+				uuidList.set(tab.tabUUID, uuidTab);
+				tab = TABS.find(allTabs[i]);
+				if (tab)
+					TABS.setWinUUID(tab);
+			}
+			for(let i = 0, length = savedTabsList.length; i < length; i++)
+			{
+				const tab = savedTabsList[i];
+				const uuidTabs = uuidList.get(tab.tabUUID);
+				if (!uuidTabs)
+					continue;
 
-  // debug.debug(JSON.stringify(prefs.data, null, 2),save, type);
-    if (Object.keys(save).length)
-      prefsSave(save, er => debug.debug("init prefs", save, er));
+				for(let index = 0; index < uuidTabs.length; index++)
+				{
+					const uuidTab = uuidTabs[index];
+					if (uuidTab.windowUUID === tab.windowUUID)
+					{
+						tab.id = uuidTab.id;
+						tab.windowId = uuidTab.windowId;
+					}
 
-    // context menu
-    onChange.createContextMenu();
-    const _allTabs = chrome.tabs.query({});
-    const _activeTabs = chrome.tabs.query({active: true});
-    const _currentTab = chrome.tabs.query({active: true, currentWindow: true});
-    TABS.loaded.then(async data =>
-    {
-      const savedTabsList = data.tabsList || [];
-      const allTabs = await _allTabs;
-      debug.debug(savedTabsList, allTabs);
-      const uuidList = new Map();
-      for(let i = 0; i < allTabs.length; i++)
-      {
-        const tab = TABS.add(allTabs[i], false);
-        const uuidTab = uuidList.get(tab.tabUUID) || [];
-        uuidTab.push(tab);
-        uuidList.set(tab.tabUUID, uuidTab);
-      }
-      for(let i = 0; i < allTabs.length; i++)
-      {
-        const tab = TABS.find(allTabs[i])
-        if (tab)
-          TABS.setWinUUID(tab);
-      }
-      for(let i = 0; i < savedTabsList.length; i++)
-      {
-        let tab = savedTabsList[i];
-        const uuidTabs = uuidList.get(tab.tabUUID);
-        if (!uuidTabs)
-          continue;
+				}
+			}
+			debug.trace("wtf", [...TABS.tabsData]);
+			debug.debug("prefs sorting tabs", [...TABS.tabsData.values()].map(a =>
+			{
+				return {url: a.url, id: a.id, tabUUID: a.tabUUID, windowUUID: a.windowUUID, uuidList, a};
+			}));
+			for(let i = 0, length = savedTabsList.length; i < length; i++)
+			{
+				let tab = savedTabsList[i];
+				const savedTabData = uuidList.get(tab.tabUUID);
+				if (savedTabData)
+				{
 
-        for(let j = 0; j < uuidTabs.length; j++)
-        {
-          const uuidTab = uuidTabs[j];
-          if (uuidTab.windowUUID === tab.windowUUID)
-          {
-            tab.id = uuidTab.id;
-            tab.windowId = uuidTab.windowId;
-          }
+					// const tabOld = CLONE(tab);
+					const tabSaved = CLONE(savedTabData);
+					tab = TABS.update(savedTabData, tab, true);
+					// TABS.setUUID(tab);
+					// TABS.setWinUUID(tab);
+					TABS.add(tab, false);
+					if (tab.id !== tabSaved.id)
+						TABS.remove(tabSaved, false);
 
-        }
-      }
-      for(let i = 0; i < savedTabsList.length; i++)
-      {
-        let tab = savedTabsList[i];
-        const data = TABS.data.get(tab.id);
+					// debug.log(tabOld.tabUUID, tabOld.id, tab.id, {tabOld, tab: CLONE(tab), tabSaved});
+				}
 
-        if (data)
-        {
-          tab = TABS.update(data, tab);
-          TABS.setUUID(tab);
-          TABS.setWinUUID(tab);
-        }
-        // else
-        //   TABS.add(tab, false);
+				// const opened = messengerHandler.onConnect.tab && messengerHandler.onConnect.tab.id === tab.id;
+				// setIcon(tab, opened);
+			}
+			const activeTabs = await _activeTabs;
+			for(let i = 0; i < activeTabs.length; i++)
+				TABS.add(activeTabs[i], false);
 
-        // const opened = messengerHandler.onConnect.tab && messengerHandler.onConnect.tab.id === tab.id;
-        // setIcon(tab, opened);
-      }
-      const activeTabs = await _activeTabs;
-      for(let i = 0; i < activeTabs.length; i++)
-        TABS.add(activeTabs[i], false);
+			debug.debug("prefs FINISHED	sorting tabs", [...TABS.tabsData.values()].map(a =>
+			{
+				return {url: a.url, id: a.id, tabUUID: a.tabUUID, windowUUID: a.windowUUID, a};
+			}));
+			TABS.save();
+			for (const [id, tab] of TABS.tabsData)
+				setIcon(tab);
 
-      TABS.save();
-      TABS.data.forEach(tab => setIcon(tab));
-      resolve();
-      const [tab] = await _currentTab;
-      setContext(tab);
-    });
-  } //prefsInit();
+			resolve();
+			const [tab] = await _currentTab;
+			return setContext(tab);
+		}).catch(error => debug.error("prefsInit", error));
+	}; //prefsInit();
 
-  STORAGE.get(null, prefsInit);
+	STORAGE.get(null, prefsInit);
 
-  // storage change listener
-  chrome.storage.onChanged.addListener( prefsOnChanged );
+	// storage change listener
+	chrome.storage.onChanged.addListener( prefsOnChanged );
 });

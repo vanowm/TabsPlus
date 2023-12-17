@@ -1,221 +1,231 @@
 {
-  "newTabPosition" : {
-    "message" : "Position of a new tab"
-  },
-  "newTabPosition_0" : {
-    "message" : "Default"
-  },
-  "newTabPosition_1" : {
-    "message" : "First"
-  },
-  "newTabPosition_2" : {
-    "message" : "Next left"
-  },
-  "newTabPosition_3" : {
-    "message" : "Next right"
-  },
-  "newTabPosition_4" : {
-    "message" : "Last"
-  },
-  "newTabActivate" : {
-    "message" : "Open a new tab in"
-  },
-  "newTabActivate_0" : {
-    "message" : "Default"
-  },
-  "newTabActivate_1" : {
-    "message" : "Foreground"
-  },
-  "newTabActivate_2" : {
-    "message" : "Background"
-  },
-  "tabsScrollFix": {
-    "message" : "Vertical tabs fix"
-  },
-  "tabsScrollFix_0" : {
-    "message" : "No"
-  },
-  "tabsScrollFix_1" : {
-    "message" : "Yes"
-  },
-  "newTabPageOnly": {
-    "message" : "New tab page only"
-  },
-  "newTabPageOnly_0" : {
-    "message" : "No"
-  },
-  "newTabPageOnly_1" : {
-    "message" : "Yes"
-  },
-  "newTabPageSkip": {
-    "message" : "Skip background \"new tab\""
-  },
-  "newTabPageSkip_desc": {
-    "message" : "When \"Last used tab\" is selected, closing a tab will not active newly created tabs that hasn't been activated yet"
-  },
-  "newTabPageSkip_0" : {
-    "message" : "No"
-  },
-  "newTabPageSkip_1" : {
-    "message" : "Yes"
-  },
-  "tabsScrollFix_desc" : {
-    "message" : "If vertical tabs don't scroll to new tab, enable this"
-  },
-  "afterClose" : {
-    "message" : "After closing open"
-  },
-  "afterClose_0" : {
-    "message" : "Default"
-  },
-  "afterClose_1" : {
-    "message" : "Last used tab"
-  },
-  "afterClose_2" : {
-    "message" : "Left"
-  },
-  "afterClose_3" : {
-    "message" : "Right"
-  },
-  "iconAction" : {
-    "message" : "Toolbar button action"
-  },
-  "iconAction_desc" : {
-    "message" : "These also available via right click"
-  },
-  "iconAction_0" : {
-    "message" : "Default"
-  },
-  "iconAction_0_desc" : {
-    "message" : "Open default menu"
-  },
-  "iconAction_1" : {
-    "message" : "Restore last closed tab"
-  },
-  "iconAction_1_badge" : {
-    "message" : "Ｒ"
-  },
-  "iconAction_2" : {
-    "message" : "Skip this tab"
-  },
-  "iconAction_2_desc" : {
-    "message" : "Unmarked tabs will be skipped from being switched to after closing a tab"
-  },
-  "iconAction_2_badge" : {
-    "message" : "Ｍ"
-  },
-  "iconAction_2_Y" : {
-    "message" : "Switch to this tab after closing another tab"
-  },
-  "iconAction_2_N" : {
-    "message" : "Don't switch to this tab after closing another tab"
-  },
-  "iconAction_2_0" : {
-    "message" : "Don't skip this tab"
-  },
-  "iconAction_2_1" : {
-    "message" : "Skip this tab"
-  },
-  "iconAction_3" : {
-    "message" : "Show list of closed tabs"
-  },
-  "iconAction_4" : {
-    "message" : "Unload tab"
-  },
-  "iconAction_4_desc" : {
-    "message" : "Unload current tab from memory"
-  },
-  "iconAction_4_badge" : {
-    "message" : "Ｕ"
-  },
-  "iconAction_5" : {
-    "message" : "Unload all tabs in current window"
-  },
-  "iconAction_5_desc" : {
-    "message" : "Unload all other tabs in current window from memory"
-  },
-  "iconAction_5_badge" : {
-    "message" : " UW"
-  },
-  "iconAction_6" : {
-    "message" : "Unload all tabs in all windows"
-  },
-  "iconAction_6_desc" : {
-    "message" : "Unload all other tabs in all windows from memory"
-  },
-  "iconAction_6_badge" : {
-    "message" : " UA"
-  },
-  "contextMenu" : {
-    "message" : "Context menu"
-  },
-  "contextMenu_desc" : {
-    "message" : "Add menu to the right click on any pages"
-  },
-  "contextMenu_0" : {
-    "message" : "No"
-  },
-  "contextMenu_1" : {
-    "message" : "Yes"
-  },
-  "syncSettings" : {
-    "message" : "Sync settings"
-  },
-  "syncSettings_desc" : {
-    "message" : "Sync settings between browsers"
-  },
-  "syncSettings_0" : {
-    "message" : "No"
-  },
-  "syncSettings_1" : {
-    "message" : "Yes"
-  },
-  "contextMenu_lastUsed": {
-    "message" : "Switch to last used tab"
-  },
-  "contextMenu_closedTabs": {
-    "message" : "Recently closed tabs"
-  },
-  "contextMenu_copy": {
-    "message" : "Copy URL"
-  },
-  "contextMenu_copyTitle": {
-    "message" : "Copy Title"
-  },
-  "settings": {
-    "message" : "Settings"
-  },
-  "options": {
-    "message" : "Options"
-  },
-  "restore": {
-    "message" : "Restore"
-  },
-  "backup_file": {
-    "message" : "Backup to file"
-  },
-  "backup_data": {
-    "message" : "Settings data"
-  },
-  "restoreFile": {
-    "message" : "Restore from file"
-  },
-  "expandWindow": {
-    "message" : "Expand windows"
-  },
-  "expandWindow_0": {
-    "message" : "No"
-  },
-  "expandWindow_1": {
-    "message" : "Yes"
-  },
-  "expandWindow_desc": {
-    "message" : "Show all tabs of closed window in the \"List of closed tabs popup\""
-  },
-  "iconActionNotes": {
-    "message" : "These also available via right click"
-  },
-  "reset": {
-    "message" : "Reset"
-  }
+	"afterClose": {
+		"message": "After closing open"
+	},
+	"afterClose_0": {
+		"message": "Default"
+	},
+	"afterClose_1": {
+		"message": "Last used tab"
+	},
+	"afterClose_2": {
+		"message": "Left"
+	},
+	"afterClose_3": {
+		"message": "Right"
+	},
+	"backup_data": {
+		"message": "Settings data"
+	},
+	"backup_file": {
+		"message": "Backup to file"
+	},
+	"contextMenu": {
+		"message": "Context menu"
+	},
+	"contextMenu_0": {
+		"message": "No"
+	},
+	"contextMenu_1": {
+		"message": "Yes"
+	},
+	"contextMenu_closedTabs": {
+		"message": "Recently closed tabs"
+	},
+	"contextMenu_copy": {
+		"message": "Copy URL"
+	},
+	"contextMenu_copyTitle": {
+		"message": "Copy Title"
+	},
+	"contextMenu_desc": {
+		"message": "Add menu to the right click on any pages"
+	},
+	"contextMenu_lastUsed": {
+		"message": "Switch to last used tab"
+	},
+	"expandWindow": {
+		"message": "Expand windows"
+	},
+	"expandWindow_0": {
+		"message": "No"
+	},
+	"expandWindow_1": {
+		"message": "Yes"
+	},
+	"expandWindow_desc": {
+		"message": "Show all tabs of closed window in the \"List of closed tabs popup\""
+	},
+	"iconAction": {
+		"message": "Toolbar button action"
+	},
+	"iconActionNotes": {
+		"message": "These also available via right click"
+	},
+	"iconAction_0": {
+		"message": "Default"
+	},
+	"iconAction_0_desc": {
+		"message": "Open default menu"
+	},
+	"iconAction_1": {
+		"message": "Restore last closed tab"
+	},
+	"iconAction_1_badge": {
+		"message": "Ｒ"
+	},
+	"iconAction_2": {
+		"message": "Skip this tab"
+	},
+	"iconAction_2_0": {
+		"message": "Don't skip this tab"
+	},
+	"iconAction_2_1": {
+		"message": "Skip this tab"
+	},
+	"iconAction_2_N": {
+		"message": "Don't switch to this tab after closing another tab"
+	},
+	"iconAction_2_Y": {
+		"message": "Switch to this tab after closing another tab"
+	},
+	"iconAction_2_badge": {
+		"message": "Ｍ"
+	},
+	"iconAction_2_desc": {
+		"message": "Unmarked tabs will be skipped from being switched to after closing or unloading a tab"
+	},
+	"iconAction_3": {
+		"message": "Show list of closed tabs"
+	},
+	"iconAction_4": {
+		"message": "Unload this tab"
+	},
+	"iconAction_4_badge": {
+		"message": "Ｕ"
+	},
+	"iconAction_4_desc": {
+		"message": "Unload current tab from memory"
+	},
+	"iconAction_5": {
+		"message": "Unload all tabs in current window"
+	},
+	"iconAction_5_badge": {
+		"message": " UW"
+	},
+	"iconAction_5_desc": {
+		"message": "Unload all other tabs in current window from memory"
+	},
+	"iconAction_6": {
+		"message": "Unload all tabs in all windows"
+	},
+	"iconAction_6_badge": {
+		"message": " UA"
+	},
+	"iconAction_6_desc": {
+		"message": "Unload all other tabs in all windows from memory"
+	},
+	"iconAction_desc": {
+		"message": "These also available via right click on toolbar button"
+	},
+	"newTabActivate": {
+		"message": "Open a new tab in"
+	},
+	"newTabActivate_0": {
+		"message": "Default"
+	},
+	"newTabActivate_1": {
+		"message": "Foreground"
+	},
+	"newTabActivate_2": {
+		"message": "Background"
+	},
+	"newTabPageOnly": {
+		"message": "New tab page only"
+	},
+	"newTabPageOnly_0": {
+		"message": "No"
+	},
+	"newTabPageOnly_1": {
+		"message": "Yes"
+	},
+	"newTabPageSkip": {
+		"message": "Skip background \"new tab\""
+	},
+	"newTabPageSkip_0": {
+		"message": "No"
+	},
+	"newTabPageSkip_1": {
+		"message": "Yes"
+	},
+	"newTabPageSkip_desc": {
+		"message": "When \"Last used tab\" is selected, closing a tab will not active newly created tabs that hasn't been activated yet"
+	},
+	"newTabPosition": {
+		"message": "Position of a new tab"
+	},
+	"newTabPosition_0": {
+		"message": "Default"
+	},
+	"newTabPosition_1": {
+		"message": "First"
+	},
+	"newTabPosition_2": {
+		"message": "Next left"
+	},
+	"newTabPosition_3": {
+		"message": "Next right"
+	},
+	"newTabPosition_4": {
+		"message": "Last"
+	},
+	"noHistory": {
+		"message": "No closed tabs"
+	},
+	"options": {
+		"message": "Options"
+	},
+	"reset": {
+		"message": "Reset"
+	},
+	"restore": {
+		"message": "Restore"
+	},
+	"restoreFile": {
+		"message": "Restore from file"
+	},
+	"settings": {
+		"message": "Settings"
+	},
+	"syncSettings": {
+		"message": "Sync settings"
+	},
+	"syncSettings_0": {
+		"message": "No"
+	},
+	"syncSettings_1": {
+		"message": "Yes"
+	},
+	"syncSettings_desc": {
+		"message": "Sync settings between browsers"
+	},
+	"tabs": {
+		"message": "tabs"
+	},
+	"tabsScrollFix": {
+		"message": "Vertical tabs fix"
+	},
+	"tabsScrollFix_0": {
+		"message": "No"
+	},
+	"tabsScrollFix_1": {
+		"message": "Yes"
+	},
+	"tabsScrollFix_desc": {
+		"message": "If vertical tabs don't scroll to new tab, enable this"
+	},
+	"window": {
+		"message": "Window"
+	}
+
 }

@@ -3,3 +3,5 @@
 /*.crx
 node_modules/*
 -----deleteme-----/*
+yarn.lock
+package-lock.json

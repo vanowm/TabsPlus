@@ -1,331 +1,352 @@
 html
 {
-  width: 97vw;
-  --backgroundColor: white;
-  background-color: var(--backgroundColor);
+	--backgroundColor: white;
+
+	width: 97vw;
+	background-color: var(--backgroundColor);
 }
+
 html, body
 {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-  white-space: nowrap;
+	width: 100%;
+	height: 100%;
+	padding: 0;
+	margin: 0;
+	white-space: nowrap;
 }
+
 body.hide
 {
-  opacity: 0;
-  pointer-events: none;
+	opacity: 0;
+	pointer-events: none;
 }
+
 body
 {
-  /* font-family: tahoma; */
-  font-size: 0.9em;
-  opacity: 1;
-  transition: opacity 0.3s;
-  -webkit-user-select: none;
-  user-select: none;
+	/* font-family: tahoma; */
+	font-size: 0.9em;
+	opacity: 1;
+	transition: opacity 0.3s;
+	-webkit-user-select: none;
+	user-select: none;
 }
 
 #header
 {
-  height: 2em;
-  vertical-align: middle;
-  position: relative;
-  font-weight: bold;
-  line-height: 2em;
-  background-color: Gainsboro;
-  border: 1px solid lightgray;
-  border-bottom-color: lightgray;
-  border-radius: 0.4em 0.4em 0 0;
-  padding: 0 2em;
-  text-align: center;
+	position: relative;
+	height: 2em;
+	padding: 0 2em;
+	border: 1px solid lightgray;
+	border-radius: 0.4em 0.4em 0 0;
+	border-bottom-color: lightgray;
+	background-color: gainsboro;
+	font-weight: bold;
+	line-height: 2em;
+	text-align: center;
+	vertical-align: middle;
 }
 
 
 #header > span:first-child
 {
-  position: absolute;
-  left: 1em;
-  line-height: 1.5em;
+	position: absolute;
+	left: 1em;
+	line-height: 1.5em;
 }
 
 .options
 {
-  margin: 1em 0.5em;
-  display: flex;
-  flex-direction: column;
-  height: -webkit-fill-available;
-  /* padding: 1em; */
-  margin-bottom: 2.5em;
+	display: flex;
+	height: -moz-available;          /* WebKit-based browsers will ignore this. */
+	height: -webkit-fill-available;  /* Mozilla-based browsers will ignore this. */
+	height: fill-available;
+	flex-direction: column;
+	margin: 1em 0.5em;
+	/* padding: 1em; */
+	margin-bottom: 2.5em;
 }
 
 .options_table
 {
-  box-shadow: 0 0 15px 4px rgba(0,0,0,0.5);
-  /*  padding: 1em 3em;*/
-  border-radius: 0.4em;
-  /* border-spacing: 0.4em; */
-  resize: both;
-  overflow: hidden;
-  min-width: max-content;
-  min-height: max-content;
-  position: absolute;
+	position: absolute;
+	overflow: hidden;
+	min-width: max-content;
+	min-height: max-content;
+	border-radius: 0.4em;
+	box-shadow: 0 0 15px 4px rgba(0 0 0 / 50%);
+	/*  padding: 1em 3em; */
+	/* border-spacing: 0.4em; */
+	resize: both;
 }
-
 
 .options_table.maximized
 {
-  left: 0 !important;
-  top: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  border-radius: initial;
-  resize: none;
+	top: 0 !important;
+	left: 0 !important;
+	width: 100% !important;
+	height: 100% !important;
+	border-radius: initial;
+	resize: none;
 }
+
 .options_table.maximized #header
 {
-  border-radius: initial;
+	border-radius: initial;
 }
 
 .table
 {
-  /*  display: table;
-  width: fit-content;*/
-  border-collapse: collapse;
-  /* margin: 0 1em; */
+	/*  display: table; */
+	/* width: fit-content; */
+	border-collapse: collapse;
+	/* margin: 0 1em; */
 }
 
 .group
 {
-  display: table-row-group;
+	display: table-row-group;
 }
 
-[group] .row:not(:first-child) > :first-child
+/* [group] .row:not(:first-child) > :first-child
 {
-  /* display: block; */
-  /* margin-left: 1em; */
-  /* line-height: 1em; */
-}
+	display: block;
+	margin-left: 1em;
+	line-height: 1em;
+} */
+
 [group] .row:not(:first-child) > :first-child::before
 {
-  content: "";
-  display: inline-block;
-  width: 1em;
-  /* height: 1em; */
-  /* background: white; */
+	display: inline-block;
+	width: 1em;
+	content: "";
+
+	/* height: 1em; */
+
+	/* background: white; */
 }
 
 .row
 {
-  display: table-row;
-  padding: 1em;
-}
-.row:hover
-{
-  background-color: rgba(127,127,127,0.1);
-}
-
-.row:hover > .option > *
-{
-  background-color: var(--backgroundColor);
-}
-.row[title] *
-{
-  cursor: help;
+	display: table-row;
+	padding: 1em;
 }
 
 .row > *
 {
-  display: table-cell;
-  vertical-align: middle;
+	display: table-cell;
+	vertical-align: middle;
 }
+
+.row[title] *
+{
+	cursor: help;
+}
+
+.row:hover
+{
+	background-color: rgb(127 127 127 / 10%);
+}
+
+.row:hover > .option > *
+{
+	background-color: var(--backgroundColor);
+}
+
 
 .option
 {
-  padding: 0.2em 1em 0.2em 1em;
+	padding: 0.2em 1em;
 }
 /*
 .row.checkbox > .option
 {
-  display: inline-block;
+	display: inline-block;
 }
 */
 
 .hidden
 {
-  display: none;
+	display: none;
 }
+
 .label
 {
-  text-align: left;
-  /* font-size: 0.9em; */
-  padding-left: 1em;
+	padding-left: 1em;
+	text-align: left;
+	/* font-size: 0.9em; */
 }
 
 select
 {
-  font-family: monospace;
-  font-size: 1em;
-  /* width: -webkit-fill-available; */
-  width: 100%;
-  padding: 0.2em;
-  vertical-align: middle;
+	width: 100%;
+	padding: 0.2em;
+	font-family: monospace;
+	font-size: 1em;
+	/* width: -webkit-fill-available; */
+	vertical-align: middle;
 }
 
 .default
 {
-  font-style: italic;
-  font-weight: bolder;
-  /* text-shadow: 1px 0px 0px #000; */
+	font-style: italic;
+	font-weight: bolder;
+	/* text-shadow: 1px 0px 0px #000; */
 }
 
 option
 {
-  font-style: normal;
+	font-style: normal;
 }
 
-option.default
+/* option.default
 {
-  /* font-weight: bolder; */
-  /* text-shadow: none; */
-}
+	font-weight: bolder;
+	text-shadow: none;
+} */
 
 .ver
 {
-  vertical-align: super;
-  font-size: 0.5em;
+	font-size: 0.5em;
+	vertical-align: super;
 }
+
 #backupRestore
 {
-  height: 5em;
-  width: 100%;
-  /*  display: block;*/
-  flex: auto;
-  resize: none;
-  min-height: 2em;
-  box-sizing: border-box;
-  font-size: 1.2em;
+	width: 100%;
+	height: 5em;
+	min-height: 2em;
+	box-sizing: border-box;
+	flex: auto;
+	font-size: 1.2em;
+	/*  display: block; */
+	resize: none;
 }
 
 textarea.error
 {
-  background-color: pink;
+	background-color: pink;
 }
 
 .disabled
 {
-  opacity: 0.5;
-  pointer-events: none;
+	opacity: 0.5;
+	pointer-events: none;
 }
 
 #exit
 {
-  border-radius: 0 0.4em 0 0;
-  padding: 0 1em;
-  position: absolute;
-  right: 0;
+	position: absolute;
+	right: 0;
+	padding: 0 1em;
+	border-radius: 0 0.4em 0 0;
 }
 
 #exit:hover
 {
-  background-color: rgb(200, 64, 64);
-  color: white;
+	background-color: rgb(200 64 64);
+	color: white;
 }
 
 #backupRestoreBox
 {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+	display: flex;
+	height: 100%;
+	flex-direction: column;
 }
 
 #backupRestoreBox > label
 {
-  padding: 1em 0;
+	padding: 1em 0;
 }
+
 .options_table.resized #backupRestoreBox
 {
-  margin-bottom: 0.0em;
-  padding: 1em;
+	padding: 1em;
+	margin-bottom: 0;
 }
+
 .backupRestoreControls
 {
-  margin-top: 0.5em;
+	margin-top: 0.5em;
 }
+
 .notes
 {
-  font-style: italic;
-  font-size: 0.8em;
-  position: relative;
-  height: 1.5em;
+	position: relative;
+	height: 1.5em;
+	font-size: 0.8em;
+	font-style: italic;
 }
+
 .notes > .option
 {
-  position: absolute;
-  padding: 0;
-  text-align: end;
-  width: 100%;
+	position: absolute;
+	width: 100%;
+	padding: 0;
+	text-align: end;
 }
 
 .checkbox > .option
 {
-  max-width: 2em;
+	max-width: 2em;
 }
 
 #reset
 {
-  float: right;
-  margin: 1.3em 0.5em 0 0;
-  font-size: 0.7em;
-  padding: 0;
-  appearance: none;
-  border: 0;
-  background-color: transparent;
-  color: inherit;
-  cursor: pointer;
-  vertical-align: bottom;
+	padding: 0;
+	border: 0;
+	margin: 1.3em 0.5em 0 0;
+	appearance: none;
+	background-color: transparent;
+	color: inherit;
+	cursor: pointer;
+	float: right;
+	font-size: 0.7em;
+	vertical-align: bottom;
 }
 
 #reset:hover
 {
-  text-shadow: 0 0 1px red;
+	text-shadow: 0 0 1px red;
 }
 
 @media (prefers-color-scheme: dark)
 {
+	html
+	{
+		--backgroundColor:#292A2D;
 
-  html
-  {
-    --backgroundColor:#292A2D;
-    background-color: #202124;
-    color: silver;
-  }
-  html *:not(button)
-  {
-    background-color: inherit;
-    color: inherit;
-  }
-  .options_table
-  {
-    background-color: var(--backgroundColor);
-  }
-  #header
-  {
-    background-color: #424242;
-    border-color: #222222;
-  }
+		background-color: #202124;
+		color: silver;
+	}
 
-  textarea.error
-  {
-    background-color: #B15A5C;
-    color: black;
-  }
+	html *:not(button)
+	{
+		background-color: inherit;
+		color: inherit;
+	}
 
-  .default
-  {
-    /* text-shadow: 0 0 4px #111; */
-    /* color: red; */
-  }
-  
+	.options_table
+	{
+		background-color: var(--backgroundColor);
+	}
+
+	#header
+	{
+		border-color: #222;
+		background-color: #424242;
+	}
+
+	textarea.error
+	{
+		background-color: #B15A5C;
+		color: black;
+	}
+
+	/* .default
+	{
+		color: red;
+		text-shadow: 0 0 4px #111;
+	} */
+	
 }

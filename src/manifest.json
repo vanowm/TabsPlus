@@ -1,38 +1,38 @@
 {
-   "name" : "Tabs+",
-   "description" : "Take control of your tabs",
-   "version" : "0.1.1.8",
-   "version_name": "0.1.1 beta8",
-   "manifest_version" : 3,
-   "background" : {
-      "service_worker" : "service_worker.js" 
-   },
-   "icons" : {
-      "128" : "ui/icons/icon_128.png",
-      "64" : "ui/icons/icon_64.png",
-      "48" : "ui/icons/icon_48.png",
-      "32" : "ui/icons/icon_32.png",
-      "24" : "ui/icons/icon_24.png",
-      "16" : "ui/icons/icon_16.png"
-   },
-   "options_page" : "ui/options.html",
-   "action" : {
-      "default_icon":
-      {
-         "128" : "ui/icons/action_128.png",
-         "64" : "ui/icons/action_64.png",
-         "48" : "ui/icons/action_48.png",
-         "32" : "ui/icons/action_32.png",
-         "24" : "ui/icons/action_24.png",
-         "16" : "ui/icons/action_16.png"
-      }
-   },
-   "default_locale" : "en",
-   "permissions" : [
-      "tabs",
-      "contextMenus",
-      "storage",
-      "sessions",
-      "alarms"
-   ]
+	"action": {
+		"default_icon":
+		{
+			"128": "ui/icons/action_128.png",
+			"16": "ui/icons/action_16.png",
+			"24": "ui/icons/action_24.png",
+			"32": "ui/icons/action_32.png",
+			"48": "ui/icons/action_48.png",
+			"64": "ui/icons/action_64.png"
+		}
+	},
+	"background": {
+		"service_worker": "service_worker.js"
+	},
+	"default_locale": "en",
+	"description": "Take control of your tabs",
+	"icons": {
+		"128": "ui/icons/icon_128.png",
+		"16": "ui/icons/icon_16.png",
+		"24": "ui/icons/icon_24.png",
+		"32": "ui/icons/icon_32.png",
+		"48": "ui/icons/icon_48.png",
+		"64": "ui/icons/icon_64.png"
+	},
+	"manifest_version": 3,
+	"name": "Tabs+",
+	"options_page": "ui/options.html",
+	"permissions": [
+		"alarms",
+		"contextMenus",
+		"sessions",
+		"storage",
+		"tabs"
+	],
+	"version": "0.1.1.9",
+	"version_name": "0.1.1 beta9"
 }

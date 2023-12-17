@@ -1,24 +1,42 @@
 {
-  "name": "tabs-plus",
-  "version": "1.0.0",
-  "license": "GPL-3",
-  "webExt": {
-    "sourceDir": "src/",
-    "artifactsDir": "xpi/",
-    "build": {
-      "overwriteDest": true,
-      "asNeeded": false
-    },
-    "sign": {
-      "apiKey": "user:630411:225",
-      "apiSecret": "5449ef3b1d96dc1e33da55804278c35c644a81217e059e52b667a884c3eb7d9c"
-    }
-  },
-  "devDependencies": {
-    "web-ext": "^7.1.1"
-  },
-  "scripts": {
-    "sign": "web-ext sign",
-    "build": "web-ext build"
-  }
+	"devDependencies": {
+		"eslint": "^8.51.0",
+		"eslint-plugin-css": "^0.8.1",
+		"eslint-plugin-eslint-comments": "^3.2.0",
+		"eslint-plugin-import": "^2.28.1",
+		"eslint-plugin-json-schema-validator": "^4.7.0",
+		"eslint-plugin-jsonc": "^2.10.0",
+		"eslint-plugin-prefer-arrow-functions": "^3.2.4",
+		"eslint-plugin-prettier": "^5.0.1",
+		"eslint-plugin-promise": "^6.1.1",
+		"eslint-plugin-sonarjs": "^0.21.0",
+		"eslint-plugin-unicorn": "^48.0.1",
+		"stylelint": "^15.10.3",
+		"stylelint-config-idiomatic-order": "^9.0.0",
+		"stylelint-config-recommended": "^13.0.0",
+		"stylelint-config-standard": "^34.0.0",
+		"stylelint-group-selectors": "^1.0.10",
+		"stylelint-order": "^6.0.3",
+		"web-ext": "^7.8.0"
+	},
+	"license": "MIT",
+	"name": "tabs-plus",
+	"scripts": {
+		"build": "web-ext build",
+		"sign": "web-ext sign",
+		"start:firefox": "web-ext run --source-dir ./src/"
+	},
+	"version": "1.0.0",
+	"webExt": {
+		"artifactsDir": "xpi/",
+		"build": {
+			"asNeeded": false,
+			"overwriteDest": true
+		},
+		"sign": {
+			"apiKey": "user:630411:225",
+			"apiSecret": "5449ef3b1d96dc1e33da55804278c35c644a81217e059e52b667a884c3eb7d9c"
+		},
+		"sourceDir": "src/"
+	}
 }
