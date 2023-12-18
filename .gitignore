@@ -1,7 +1,8 @@
 *.zip
 *.pem
-/*.crx
-node_modules/*
------deleteme-----/*
+*.crx
+.vscode
+node_modules
+-----deleteme-----
 yarn.lock
 package-lock.json
