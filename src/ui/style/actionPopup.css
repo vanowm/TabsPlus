@@ -19,7 +19,7 @@ body
 	-webkit-user-select: none;
 	user-select: none;
 
-	--date-offset: calc(3em + var(--date-length));
+	--date-offset: calc((var(--num-length) + 1.5em) + var(--date-length));
 }
 
 body.no-date
@@ -183,7 +183,8 @@ body:not([contextMenu]) .menu.option .date:hover ~ .menuTitle > * > *:not(.sub)
 .option:not(.menu)::before
 {
 	display: inline-block;
-	min-width: 1em;
+	/* min-width: 1em; */
+	width: var(--num-length);
 	height: 2em;
 	padding-right: 0.5em;
 	content: attr(data-num);
@@ -236,7 +237,7 @@ body:not([contextMenu]) .menu.option .date:hover ~ .menuTitle > * > *:not(.sub)
 .faviconPlaceholder
 {
 	width: 1.5em;
-	margin: 0.2em 0.5em auto 0;
+	margin: 0.3em 0.5em auto 0.1em;
 	grid-area: favicon;
 }
 
@@ -330,7 +331,7 @@ body:not([contextMenu]) > #contextMenu,
 {
 	position: absolute;
 	top: 0;
-	left: 2em;
+	left: calc(var(--num-length) + 0.5em);
 	overflow: unset;
 	width: -webkit-fill-available;
 	height: 2.5em;

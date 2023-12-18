@@ -62,7 +62,7 @@ const sDay = chrome.i18n.getMessage("day");
 const sMonth = chrome.i18n.getMessage("month");
 const sYear = chrome.i18n.getMessage("year");
 
-const genTemplate = (elContainer, sessions, isWindow) =>
+const genTemplate = ({elContainer, sessions, isWindow, numberLength}) =>
 {
 	let n = 1;
 	if (sessions.length === 0)
@@ -73,7 +73,7 @@ const genTemplate = (elContainer, sessions, isWindow) =>
 	}
 	for (let i = 0; i < sessions.length; i++)
 	{
-		elContainer.append(getOption({ sessionItem: sessions[i], isWindow, n }));
+		elContainer.append(getOption({ sessionItem: sessions[i], isWindow, n, sessions, numberLength}));
 		n++;
 	}
 };
@@ -110,7 +110,7 @@ const relativeDate = date =>
 	return Math.floor(diff / year) + sYear;
 };
 
-const getOption = ({ sessionItem, isWindow, n }) =>
+const getOption = ({ sessionItem, isWindow, n, sessions, numberLength }) =>
 {
 	let _total = 0;
 	let session = sessionItem.window;
@@ -122,13 +122,12 @@ const getOption = ({ sessionItem, isWindow, n }) =>
 	const sDate = relativeDate(sessionItem.lastModified * 1000);
 	if (session)
 	{
-		session = sessionItem.window;
 		option = elTemplateMenu.cloneNode(true);
 		_total = total++;
-		genTemplate(option.querySelector(".container"), session.tabs.map(tab =>
+		genTemplate({elContainer: option.querySelector(".container"), sessions: session.tabs.map(tab =>
 		{
 			return {lastModified: sessionItem.lastModified, tab};
-		}), n);
+		}), isWindow: n, numberLength});
 		total = _total;
 		tabsCount = session.tabs.length;
 		_total = tabsCount;
@@ -146,6 +145,7 @@ const getOption = ({ sessionItem, isWindow, n }) =>
 			option.classList.add("open");
 
 		option.querySelector(".menuTitle .date").textContent = sDate;
+		option.querySelector(".container").style.setProperty("--num-length", numberLength + ("" + tabsCount).length + "ch");
 	}
 	else
 	{
@@ -259,9 +259,12 @@ const init = pref =>
 		elTemplateMenu = document.querySelector("#templates > .menu");
 
 		total = 0;
-		genTemplate(elMenu, sessions);
+		const numberLength = ("" + sessions.length).length;
+		genTemplate({elContainer: elMenu, sessions, numberLength});
 		document.documentElement.style.setProperty("--window-title-length", windowTitleLength + "ch");
 		document.documentElement.style.setProperty("--date-length", dateLength + "ch");
+		document.documentElement.style.setProperty("--num-length", numberLength + "ch");
+		document.documentElement.style.setProperty("--total", total);
 
 	});
 
