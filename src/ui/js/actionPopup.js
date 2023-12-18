@@ -59,7 +59,6 @@ const sSecond = chrome.i18n.getMessage("second");
 const sMinute = chrome.i18n.getMessage("minute");
 const sHour = chrome.i18n.getMessage("hour");
 const sDay = chrome.i18n.getMessage("day");
-const sWeek = chrome.i18n.getMessage("week");
 const sMonth = chrome.i18n.getMessage("month");
 const sYear = chrome.i18n.getMessage("year");
 
@@ -86,10 +85,8 @@ const relativeDate = date =>
 	const minute = 60;
 	const hour = minute * 60;
 	const day = hour * 24;
-	const week = day * 7;
 	const month = day * 30;
 	const year = month * 12;
-
 	if (diff < minute)
 	{
 		return diff + sSecond;
@@ -102,13 +99,9 @@ const relativeDate = date =>
 	{
 		return Math.floor(diff / hour) + sHour;
 	}
-	else if (diff < week)
-	{
-		return week + sDay;
-	}
 	else if (diff < month)
 	{
-		return Math.floor(diff / week) + sWeek;
+		return Math.floor(diff / day) + sDay;
 	}
 	else if (diff < year)
 	{
