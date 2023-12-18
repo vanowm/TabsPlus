@@ -108,19 +108,8 @@ const relativeDate = date =>
 		return Math.floor(diff / month) + sMonth;
 	}
 	return Math.floor(diff / year) + sYear;
-
-	// return new Date(date).toLocaleDateString("sv", { //yy-mm-dd hh:mm:ss
-	// 	year: "numeric",
-	// 	month: "2-digit",
-	// 	day: "2-digit",
-	// 	hour: "2-digit",
-	// 	minute: "2-digit",
-	// 	second: "2-digit",
-	// 	hour12: false,
-	// 	timeZone: "utc"
-	// });
-
 };
+
 const getOption = ({ sessionItem, isWindow, n }) =>
 {
 	let _total = 0;
@@ -146,8 +135,8 @@ const getOption = ({ sessionItem, isWindow, n }) =>
 		option.querySelector(".title").dataset.num = index;
 		const elMenuTitle = option.querySelector(".menuTitle .title");
 		const windowTitle = `${sWindow} (${_total} ${_total > 1 ? sTabs : sTab})`;
-		if (windowTitleLength < windowTitle.length)
-			windowTitleLength = windowTitle.length;
+		if (windowTitleLength < windowTitle.length + sDate.length)
+			windowTitleLength = windowTitle.length + sDate.length;
 
 		if (dateLength < sDate.length)
 			dateLength = sDate.length;
@@ -169,6 +158,7 @@ const getOption = ({ sessionItem, isWindow, n }) =>
 		elUrl.textContent = url;
 		elUrl.title = url;
 		option.title = title;
+		option.dataset.num = index;
 	}
 	// option.querySelector(".num").textContent = index; // (_n ? _n + "|" : "") + n;
 	option.querySelector(".favicon").src = favicon;
@@ -177,10 +167,10 @@ const getOption = ({ sessionItem, isWindow, n }) =>
 
 	const elTitle = option.querySelector(".title");
 	elTitle.textContent = title;
-	option.dataset.num = index;
 	const elDate = option.querySelector(".date");
 	elDate.textContent = sDate;
-	elDate.title = new Date(sessionItem.lastModified * 1000);
+	const date = new Date(sessionItem.lastModified * 1000).toString();
+	elDate.title = date.split(" ").slice(0, 5).join(" ");//.toLocaleString("sv");
 
 	option.addEventListener("click", onClick({ option, isMenu: !!sessionItem.window, elTitle, session }));
 
@@ -270,7 +260,7 @@ const init = pref =>
 
 		total = 0;
 		genTemplate(elMenu, sessions);
-		document.body.style.setProperty("--window-title-length", windowTitleLength + "ch");
+		document.documentElement.style.setProperty("--window-title-length", windowTitleLength + "ch");
 		document.documentElement.style.setProperty("--date-length", dateLength + "ch");
 
 	});

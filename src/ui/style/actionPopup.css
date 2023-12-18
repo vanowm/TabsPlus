@@ -1,13 +1,13 @@
+
 :root
 {
 	--hover-color: unset;
 	--hover-bg-color: #EAEAEA;
-	--menu-bg-color: #CACACA;
+	--menu-bg-color: #f7f7f7;
 	--color: unset;
 	--background-color: white;
 	--menu-border-width: 0.8em;
 	--date-border: #CACACA;
-	--date-offset: calc(4.5em + var(--date-length));
 }
 
 body
@@ -18,6 +18,13 @@ body
 	color: var(--color);
 	-webkit-user-select: none;
 	user-select: none;
+
+	--date-offset: calc(3em + var(--date-length));
+}
+
+body.no-date
+{
+	--date-length: 0ch;
 }
 
 #empty,
@@ -97,8 +104,8 @@ body
 
 .sub
 {
-	display: inline-block;
 	padding: 0 0.5em;
+	float: left;
 	pointer-events: all;
 	vertical-align: top;
 }
@@ -141,7 +148,7 @@ body
 	display: inline-block;
 	width: calc(var(--window-title-length) + var(--date-length));
 	height: 2.5em;
-	margin-right: calc(var(--date-length) + 1em);
+	margin-right: var(--date-length);
 	text-align: left;
 }
 
@@ -180,6 +187,7 @@ body:not([contextMenu]) .menu.option .date:hover ~ .menuTitle > * > *:not(.sub)
 	height: 2em;
 	padding-right: 0.5em;
 	content: attr(data-num);
+	font-weight: normal;
 	grid-area: num;
 	line-height: 2em;
 	text-align: right;
@@ -260,11 +268,6 @@ body:not([contextMenu]) .menu.option .date:hover ~ .menuTitle > * > *:not(.sub)
 .option.open .sub::before
 {
 	content: "▲";
-}
-
-body.no-date
-{
-	--date-offset: 4em;
 }
 
 /* stylelint-disable-next-line no-descending-specificity */
