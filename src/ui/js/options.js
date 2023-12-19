@@ -189,6 +189,7 @@ const init = ({ data: prefs }) =>
 		const ids = {
 			expandWindow: prefs.iconAction.value !== ACTION_LIST,
 			showDate: prefs.iconAction.value !== ACTION_LIST,
+			showUrl: prefs.iconAction.value !== ACTION_LIST,
 			tabsScrollFix: 	prefs.newTabActivate.value !== 1,
 			newTabPageOnly: prefs.newTabActivate.value !== 1,
 			newTabPageSkip: !prefs.newTabActivate.value || prefs.afterClose.value !== 1

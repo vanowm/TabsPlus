@@ -1,6 +1,7 @@
 *.zip
 *.pem
 *.crx
+xpi
 .vscode
 node_modules
 -----deleteme-----

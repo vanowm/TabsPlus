@@ -224,6 +224,18 @@
 	"showDate_desc": {
 		"message": "Show date when tab/window was closed"
 	},
+	"showUrl":	{
+		"message": "Show URL"
+	},
+	"showUrl_0": {
+		"message": "No"
+	},
+	"showUrl_1": {
+		"message": "Yes"
+	},
+	"showUrl_desc": {
+		"message": "Show URL of a closed tab"
+	},
 	"syncSettings": {
 		"message": "Sync settings"
 	},

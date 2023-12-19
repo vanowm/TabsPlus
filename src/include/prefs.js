@@ -67,6 +67,11 @@ const prefs = Object.defineProperties((name, value) =>
 				default: 0,
 				group: "iconAction"
 			},
+			showUrl:
+			{
+				default: 1,
+				group: "iconAction"
+			},
 			showDate:
 			{
 				default: 1,

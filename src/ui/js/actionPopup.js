@@ -12,11 +12,10 @@ let elTemplateOption = null;
 let elTemplateMenu = null;
 let elCopyTitle = null;
 let windowTitleLength = 0;
-let dateLength = 0;
 
 chrome.sessions.onChanged.addListener(() => setTimeout(init, 100));
 
-const messenger = () =>
+const messenger = reconnected =>
 {
 	const tab = chrome.tabs.query({ active: true, currentWindow: true }).then(tabs => tabs[0]);
 	debug.debug("popup messenger");
@@ -26,7 +25,8 @@ const messenger = () =>
 		debug.debug("popup onMessage", message);
 		switch (message.type)
 		{
-			case "prefs": {
+			case "prefs": /* this start init */
+			{
 				for (const i in message.data)
 				{
 					if (!(i in prefs))
@@ -34,18 +34,21 @@ const messenger = () =>
 
 					Object.assign(prefs[i], message.data[i]);
 				}
-				init();
+				if (!reconnected)
+					init();
+
 				break;
 			}
-			case "prefChanged": {
+			case "prefChanged":
+			{
 				prefs[message.name].value = message.newValue;
 				init(message.name);
 				break;
 			}
 		}
 	});
-	port.onDisconnect.addListener(messenger);
-	port.postMessage({ type: "prefs" });
+	port.onDisconnect.addListener(messenger); //this will allow us automatically reconnect
+	port.postMessage({ type: "prefs" }); //get prefs and start initialization
 	tab.then(_tab => port.postMessage({ type: "tab", data: _tab }))
 		.catch(error => debug.error("popup messenger", error));
 };
@@ -61,10 +64,10 @@ const sHour = chrome.i18n.getMessage("hour");
 const sDay = chrome.i18n.getMessage("day");
 const sMonth = chrome.i18n.getMessage("month");
 const sYear = chrome.i18n.getMessage("year");
+const aDates = [];
 
-const genTemplate = ({elContainer, sessions, isWindow, numberLength}) =>
+const genTemplate = ({elContainer, sessions, isWindow}) =>
 {
-	let n = 1;
 	if (sessions.length === 0)
 	{
 		document.body.classList.add("empty");
@@ -73,8 +76,7 @@ const genTemplate = ({elContainer, sessions, isWindow, numberLength}) =>
 	}
 	for (let i = 0; i < sessions.length; i++)
 	{
-		elContainer.append(getOption({ sessionItem: sessions[i], isWindow, n, sessions, numberLength}));
-		n++;
+		elContainer.append(getOption({ sessions, isWindow, i}));
 	}
 };
 
@@ -110,15 +112,16 @@ const relativeDate = date =>
 	return Math.floor(diff / year) + sYear;
 };
 
-const getOption = ({ sessionItem, isWindow, n, sessions, numberLength }) =>
+const getOption = ({ sessions, isWindow, i}) =>
 {
+	const sessionItem = sessions[i];
 	let _total = 0;
 	let session = sessionItem.window;
 	let option;
 	let favicon = "";
 	let tabsCount = 0;
 	let title = "";
-	const index = (isWindow === undefined ? "" : isWindow + ".") + n;
+	const index = (isWindow === undefined ? "" : isWindow + ".") + ++i;
 	const sDate = relativeDate(sessionItem.lastModified * 1000);
 	if (session)
 	{
@@ -127,25 +130,17 @@ const getOption = ({ sessionItem, isWindow, n, sessions, numberLength }) =>
 		genTemplate({elContainer: option.querySelector(".container"), sessions: session.tabs.map(tab =>
 		{
 			return {lastModified: sessionItem.lastModified, tab};
-		}), isWindow: n, numberLength});
+		}), isWindow: i});
 		total = _total;
 		tabsCount = session.tabs.length;
 		_total = tabsCount;
-		option.querySelector(".title").dataset.num = index;
-		const elMenuTitle = option.querySelector(".menuTitle .title");
-		const windowTitle = `${sWindow} (${_total} ${_total > 1 ? sTabs : sTab})`;
-		if (windowTitleLength < windowTitle.length + sDate.length)
-			windowTitleLength = windowTitle.length + sDate.length;
+		title = `${sWindow} (${_total} ${_total > 1 ? sTabs : sTab})`;
+		if (windowTitleLength < title.length)
+			windowTitleLength = title.length;
 
-		if (dateLength < sDate.length)
-			dateLength = sDate.length;
-
-		elMenuTitle.textContent = windowTitle;
 		if (prefs.expandWindow.value)
 			option.classList.add("open");
 
-		option.querySelector(".menuTitle .date").textContent = sDate;
-		option.querySelector(".container").style.setProperty("--num-length", numberLength + ("" + tabsCount).length + "ch");
 	}
 	else
 	{
@@ -156,23 +151,29 @@ const getOption = ({ sessionItem, isWindow, n, sessions, numberLength }) =>
 		const url = session.url;
 		const elUrl = option.querySelector(".url");
 		elUrl.textContent = url;
-		elUrl.title = url;
-		option.title = title;
-		option.dataset.num = index;
+		// elUrl.title = url;
+		option.title = title + "\n" + url;
+		option.querySelector(".favicon").src = favicon;
 	}
-	// option.querySelector(".num").textContent = index; // (_n ? _n + "|" : "") + n;
-	option.querySelector(".favicon").src = favicon;
 	for (const s in session)
 		option.dataset[s] = Array.isArray(session[s]) ? session[s].length : session[s];
 
+	const elIndex = option.querySelector(".index");
+	elIndex.textContent = index;
+
 	const elTitle = option.querySelector(".title");
 	elTitle.textContent = title;
-	const elDate = option.querySelector(".date");
-	elDate.textContent = sDate;
-	const date = new Date(sessionItem.lastModified * 1000).toString();
-	elDate.title = date.split(" ").slice(0, 5).join(" ");//.toLocaleString("sv");
 
-	option.addEventListener("click", onClick({ option, isMenu: !!sessionItem.window, elTitle, session }));
+	if (!isWindow)
+	{
+		const elDate = option.querySelector(":scope > .date");
+		elDate.textContent = sDate;
+		const date = new Date(sessionItem.lastModified * 1000).toString();
+		elDate.title = date.split(" ").slice(0, 5).join(" ");//.toLocaleString("sv");
+		aDates.push(elDate);
+	}
+
+	option.addEventListener("click", onClick({ option, session }));
 
 	if (_total)
 		total += _total;
@@ -181,24 +182,19 @@ const getOption = ({ sessionItem, isWindow, n, sessions, numberLength }) =>
 	return option;
 };
 
-const onClick = ({ option, isMenu, elTitle, session }) => evt =>
+const onClick = ({ option, session }) => evt =>
 {
 	if (contextMenuOption)
 		return;
 
 	contextMenuClose(evt);
 	evt.stopPropagation();
-	// const sub = evt.target.classList.contains("sub") ? evt.target : (evt.target.parentNode.classList.contains("sub") ? evt.target.parentNode : null);
-	if (evt.target.classList.contains("sub") && evt.target || (evt.target.parentNode.classList.contains("sub") ? evt.target.parentNode : null))
+	if (evt.target.classList.contains("sub"))
 		return option.classList.toggle("open");
 
-	const elHover = option.querySelector(":hover");
-	if (!isMenu || (isMenu && (elHover === elTitle || elHover.closest(".title") === elTitle || elHover.matches(".date"))))
-	{
-		debug.debug("restore", session.sessionId);
-		chrome.sessions.restore(session.sessionId);
-		window.close();
-	}
+	debug.debug("restore", session.sessionId);
+	chrome.sessions.restore(session.sessionId);
+	window.close();
 };
 
 const contextMenuClose = evt =>
@@ -242,12 +238,37 @@ const contextMenuClose = evt =>
 };
 
 document.title = chrome.i18n.getMessage("contextMenu_closedTabs");
+let lastTimestamp;
+
+const timeLoop = timestamp =>
+{
+	if (timestamp - lastTimestamp > 1000)
+	{
+		lastTimestamp = timestamp;
+		if (prefs.showDate.value)
+		{
+			for(let i = 0; i < aDates.length; i++)
+				aDates[i].textContent = relativeDate(aDates[i].title);
+		}
+	}
+	requestAnimationFrame(timeLoop);
+};
+
 const init = pref =>
 {
 	document.body.classList.toggle("no-date", !prefs.showDate.value);
-	if (pref && pref !== "expandWindow")
+	document.body.classList.toggle("no-url", !prefs.showUrl.value);
+	lastTimestamp = 0;
+	if (pref)
+	{
+		if (pref === "expandWindow")
+		{
+			const nlMenus = document.querySelectorAll(".menu");
+			for (let i = 0; i < nlMenus.length; i++)
+				nlMenus[i].classList.toggle("open", prefs.expandWindow.value);
+		}
 		return;
-
+	}
 	elMenu = document.getElementById("list");
 	elCopy = document.getElementById("copy");
 	elCopyTitle = document.getElementById("copyTitle");
@@ -255,15 +276,12 @@ const init = pref =>
 	elMenu.innerHTML = "";
 	chrome.sessions.getRecentlyClosed(sessions =>
 	{
-		elTemplateOption = document.querySelector("#templates > .option");
-		elTemplateMenu = document.querySelector("#templates > .menu");
+		elTemplateOption = document.querySelector("#templates .option");
+		elTemplateMenu = document.querySelector("#templates .menu");
 
 		total = 0;
-		const numberLength = ("" + sessions.length).length;
-		genTemplate({elContainer: elMenu, sessions, numberLength});
+		genTemplate({elContainer: elMenu, sessions});
 		document.documentElement.style.setProperty("--window-title-length", windowTitleLength + "ch");
-		document.documentElement.style.setProperty("--date-length", dateLength + "ch");
-		document.documentElement.style.setProperty("--num-length", numberLength + "ch");
 		document.documentElement.style.setProperty("--total", total);
 
 	});
@@ -345,6 +363,8 @@ const init = pref =>
 	{
 		debug.debug("blur", evt);
 	});
+
+	timeLoop();
 	inited = true;
 }; //init()
 
