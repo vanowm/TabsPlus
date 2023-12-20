@@ -128,8 +128,8 @@ body[contextMenu] > *:not(#contextMenu) *
 
 .open
 {
-	/* --background-color: var(
-	--menu-bg-color); */
+	--background-color: var(--menu-bg-color);
+
 	background-color: var(--menu-bg-color);
 }
 
