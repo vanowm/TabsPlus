@@ -22,22 +22,29 @@ body
 
 .index
 {
-	width: 0;
-	padding: 1em 0 0.8em 0.8em;
+	padding: 1em 0 0.8em 0.5em;
+	grid-area: index;
 	text-align: right;
 	vertical-align: top;
+}
+
+.menu > .index
+{
+	padding: 0.5em 0 0.5em 0.5em;
 }
 
 .tabs .index
 {
 	padding-left: 0;
+	justify-self: right;
 }
 
 .tabs .index,
 #empty,
 .container
 {
-	text-align: left;
+	display: inline-block;
+	width: max-content;
 }
 
 
@@ -49,7 +56,11 @@ table
 .option
 {
 	position: relative;
+	display: grid;
 	background-color: var(--background-color);
+	grid-template-areas:
+		"index content date";
+	grid-template-columns: var(--index-length-tabs, var(--index-length)) 1fr 0;
 }
 
 td > *
@@ -65,11 +76,17 @@ td > *
 	white-space: nowrap;
 }
 
-
-.option:not(:last-child)
+.tabs > .option
 {
-	border-bottom: 1px dotted rgb(128 128 128 / 30%);
+	text-align: left;
 }
+
+.tabs > .option,
+:not(.tabs) > .option:not(:first-of-type)
+{
+	border-top: 1px dotted rgb(128 128 128 / 30%);
+}
+
 
 .title
 {
@@ -105,20 +122,22 @@ td > *
 	position: absolute;
 	top: 0;
 	right: 0;
+	min-width: 2ch;
 	height: 4em;
 	padding: 0 0.3em;
-	/* background-color: var(--background-color); */
-	color: var(--color);
 	font-size: 0.8em;
 	font-weight: normal;
-	text-align: end;
-	vertical-align: top;
 }
 
 .tabs
 {
-	width: 100%;
-	margin: 0 0 0.3em;
+	--offset: calc(calc(var(--index-length) + 0.3em) / 1.5);
+
+	position: relative;
+	left: calc(0.0em - var(--offset));
+	display: grid;
+	width: calc(100% + calc(var(--offset) / 2));
+	margin: 0 0 0.5em;
 }
 
 body[contextMenu] > *:not(#contextMenu) *
@@ -157,8 +176,7 @@ body[contextMenu] > *:not(#contextMenu) *
 
 .content
 {
-	padding-right: 0.5em;
-	vertical-align: middle;
+	grid-area: content;
 	white-space: nowrap;
 }
 
@@ -183,9 +201,10 @@ body[contextMenu] > *:not(#contextMenu) *
 
 .menu > .content
 {
+	position: relative;
+	overflow: visible;
 	padding-left: 0.3em;
 	text-align: center;
-	vertical-align: middle;
 }
 
 .menu:not(.open) > .content
@@ -198,7 +217,7 @@ body[contextMenu] > *:not(#contextMenu) *
 	display: inline-flex;
 	justify-content: flex-start;
 	padding: 0;
-	line-height: 2.5em;
+	line-height: 2.0em;
 }
 
 .url
@@ -248,7 +267,7 @@ body[contextMenu] > *:not(#contextMenu) *
 #empty,
 #templates,
 body.no-date .date,
-.menu .option .date,
+/* .menu .option .date, */
 body:not([contextMenu]) > #contextMenu,
 .favicon[src=""],
 .option:not(.open) .container,

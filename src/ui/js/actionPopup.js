@@ -7,7 +7,6 @@ let inited = false;
 let contextMenuOption = null;
 let elMenu = null;
 let elCopy = null;
-let total = 0;
 let elTemplateOption = null;
 let elTemplateMenu = null;
 let elCopyTitle = null;
@@ -66,20 +65,6 @@ const sMonth = chrome.i18n.getMessage("month");
 const sYear = chrome.i18n.getMessage("year");
 const aDates = [];
 
-const genTemplate = ({elContainer, sessions, isWindow}) =>
-{
-	if (sessions.length === 0)
-	{
-		document.body.classList.add("empty");
-		document.getElementById("empty").textContent = chrome.i18n.getMessage("noHistory");
-		window.addEventListener("click", window.close);
-	}
-	for (let i = 0; i < sessions.length; i++)
-	{
-		elContainer.append(getOption({ sessions, isWindow, i}));
-	}
-};
-
 const relativeDate = date =>
 {
 	const diff = Math.round((Date.now() - new Date(date)) / 1000);
@@ -112,29 +97,40 @@ const relativeDate = date =>
 	return Math.floor(diff / year) + sYear;
 };
 
-const getOption = ({ sessions, isWindow, i}) =>
+const genTemplate = ({elContainer, sessions, windowIndex, indexLength = 0}) =>
 {
-	const sessionItem = sessions[i];
-	let _total = 0;
+	if (sessions.length === 0)
+	{
+		document.body.classList.add("empty");
+		document.getElementById("empty").textContent = chrome.i18n.getMessage("noHistory");
+		window.addEventListener("click", window.close);
+	}
+	for (let index = 0; index < sessions.length; index++)
+	{
+		getOption({ elContainer, sessions, windowIndex, index, indexLength});
+	}
+};
+
+const getOption = ({ elContainer, sessions, windowIndex, index, indexLength}) =>
+{
+	const sessionItem = sessions[index];
 	let session = sessionItem.window;
 	let option;
 	let favicon = "";
-	let tabsCount = 0;
 	let title = "";
-	const index = (isWindow === undefined ? "" : isWindow + ".") + ++i;
+	const sIndex = (windowIndex === undefined ? "" : windowIndex + ".") + ++index;
+	if (indexLength < sIndex.length)
+		indexLength = sIndex.length;
+
 	const sDate = relativeDate(sessionItem.lastModified * 1000);
 	if (session)
 	{
 		option = elTemplateMenu.cloneNode(true);
-		_total = total++;
 		genTemplate({elContainer: option.querySelector(".container"), sessions: session.tabs.map(tab =>
 		{
 			return {lastModified: sessionItem.lastModified, tab};
-		}), isWindow: i});
-		total = _total;
-		tabsCount = session.tabs.length;
-		_total = tabsCount;
-		title = `${sWindow} (${_total} ${_total > 1 ? sTabs : sTab})`;
+		}), windowIndex: index, indexLength: 0});
+		title = `${sWindow} (${session.tabs.length} ${session.tabs.length > 1 ? sTabs : sTab})`;
 		if (windowTitleLength < title.length)
 			windowTitleLength = title.length;
 
@@ -146,39 +142,36 @@ const getOption = ({ sessions, isWindow, i}) =>
 	{
 		option = elTemplateOption.cloneNode(true);
 		session = sessionItem.tab || sessionItem;
-		favicon = session.favIconUrl;
-		title = session.title;
 		const url = session.url;
+		favicon = session.favIconUrl || prefs.favicons.value[url] || "";
+		title = session.title;
 		const elUrl = option.querySelector(".url");
 		elUrl.textContent = url;
 		// elUrl.title = url;
 		option.title = title + "\n" + url;
 		option.querySelector(".favicon").src = favicon;
 	}
-	for (const s in session)
-		option.dataset[s] = Array.isArray(session[s]) ? session[s].length : session[s];
+	// for (const s in session)
+	// 	option.dataset[s] = Array.isArray(session[s]) ? session[s].length : session[s];
 
 	const elIndex = option.querySelector(".index");
-	elIndex.textContent = index;
+	elIndex.textContent = sIndex;
 
 	const elTitle = option.querySelector(".title");
 	elTitle.textContent = title;
 
-	if (!isWindow)
+	const elDate = option.querySelector(":scope > .date");
+	const date = new Date(sessionItem.lastModified * 1000).toString();
+	elDate.title = date.split(" ").slice(0, 5).join(" ");//.toLocaleString("sv");
+	if (!windowIndex)
 	{
-		const elDate = option.querySelector(":scope > .date");
 		elDate.textContent = sDate;
-		const date = new Date(sessionItem.lastModified * 1000).toString();
-		elDate.title = date.split(" ").slice(0, 5).join(" ");//.toLocaleString("sv");
 		aDates.push(elDate);
 	}
 
 	option.addEventListener("click", onClick({ option, session }));
-
-	if (_total)
-		total += _total;
-
-	total++;
+	elContainer.append(option);
+	elContainer.style.setProperty("--index-length" + (windowIndex ? "-tabs" : ""), indexLength + (windowIndex ? 0 : 1) + "ch");
 	return option;
 };
 
@@ -279,10 +272,8 @@ const init = pref =>
 		elTemplateOption = document.querySelector("#templates .option");
 		elTemplateMenu = document.querySelector("#templates .menu");
 
-		total = 0;
 		genTemplate({elContainer: elMenu, sessions});
 		document.documentElement.style.setProperty("--window-title-length", windowTitleLength + "ch");
-		document.documentElement.style.setProperty("--total", total);
 
 	});
 

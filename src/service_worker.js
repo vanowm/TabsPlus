@@ -1191,8 +1191,36 @@ chrome.contextMenus.onClicked.addListener(onWrapper((info, tab) =>
 
 chrome.action.onClicked.addListener(onWrapper(actionButton));
 
+const updateFavicons = (sessions, newFavicons, oldFavicons) =>
+{
+	for(let i = 0; i < sessions.length; i++)
+	{
+		const session = sessions[i].tab || sessions[i];
+		if (session?.window?.tabs)
+			updateFavicons(session.window.tabs, newFavicons, oldFavicons);
+
+		if (session.favIconUrl)
+		{
+			newFavicons[session.url] = session.favIconUrl;
+			delete oldFavicons[session.url];
+		}
+	}
+};
+
 chrome.sessions.onChanged.addListener((...args) =>
 {
 	debug.debug("session.onChanged", args);
+	chrome.sessions.getRecentlyClosed(sessions =>
+	{
+		const favicons = prefs("favicons");
+		const newFavicons = {};
+		const oldFavicons = Object.assign({}, favicons);
+		updateFavicons(sessions, newFavicons, oldFavicons);
+		for(const i in oldFavicons)
+			delete favicons[i];
+
+		Object.assign(favicons, newFavicons);
+		prefs("favicons", favicons);
+	});
 	contextMenu.createContextMenu();
 });

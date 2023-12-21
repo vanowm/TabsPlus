@@ -9,7 +9,7 @@ const prefs = Object.defineProperties((name, value) =>
 
 	const save = prefs[name];
 	prefs.data[name].value = value;
-	if (save !== value)
+	if (save !== value || (typeof save === "object"))
 	{
 		const o = {};
 		o[name] = value;
@@ -93,6 +93,21 @@ const prefs = Object.defineProperties((name, value) =>
 				noSync: true,
 				default: []
 			},
+			favicons:
+			{
+				noSync: true,
+				default: {}
+			},
+			tabsList:
+			{
+				noSync: true,
+				default: []
+			},
+			tabsOrder:
+			{
+				noSync: true,
+				default: []
+			},
 			version:
 			{
 				noSync: true,
@@ -128,7 +143,7 @@ function prefsOnChanged (changes, area)
 
 const prefsSave = (o, callback) =>
 {
-	debug.debug(STORAGE === chrome.storage.local, o);
+	debug.debug("prefsSave", STORAGE === chrome.storage.local, o);
 	if (STORAGE === chrome.storage.local)
 		return STORAGE.set(o, callback);
 
