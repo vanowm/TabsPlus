@@ -50,6 +50,7 @@ module.exports = {
 		"setIcon": true,
 		"setContext": true,
 		"Void": true,
+		"compareVersions": true,
 	},
 
 	"ignorePatterns": [
@@ -145,7 +146,14 @@ module.exports = {
 					"error",
 					"tab"
 				],
-				"jsonc/key-name-casing": "off"
+				"jsonc/key-name-casing": "off",
+				"jsonc/sort-keys": [
+					"error",
+					"asc",
+					{
+						"natural": true,
+					}
+				]
 			}
 		},
 

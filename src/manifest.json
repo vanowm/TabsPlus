@@ -2,12 +2,12 @@
 	"action": {
 		"default_icon":
 		{
-			"128": "ui/icons/action_128.png",
 			"16": "ui/icons/action_16.png",
 			"24": "ui/icons/action_24.png",
 			"32": "ui/icons/action_32.png",
 			"48": "ui/icons/action_48.png",
-			"64": "ui/icons/action_64.png"
+			"64": "ui/icons/action_64.png",
+			"128": "ui/icons/action_128.png"
 		}
 	},
 	"background": {
@@ -16,12 +16,12 @@
 	"default_locale": "en",
 	"description": "Take control of your tabs",
 	"icons": {
-		"128": "ui/icons/icon_128.png",
 		"16": "ui/icons/icon_16.png",
 		"24": "ui/icons/icon_24.png",
 		"32": "ui/icons/icon_32.png",
 		"48": "ui/icons/icon_48.png",
-		"64": "ui/icons/icon_64.png"
+		"64": "ui/icons/icon_64.png",
+		"128": "ui/icons/icon_128.png"
 	},
 	"manifest_version": 3,
 	"name": "Tabs+",
@@ -33,6 +33,6 @@
 		"storage",
 		"tabs"
 	],
-	"version": "0.1.1.15",
-	"version_name": "0.1.1 beta15"
+	"version": "0.1.1.16",
+	"version_name": "0.1.1 beta16"
 }

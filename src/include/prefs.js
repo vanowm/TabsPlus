@@ -48,7 +48,9 @@ const prefs = Object.defineProperties((name, value) =>
 			tabsScrollFix:
 			{
 				default: 0,
-				group: "newTabActivate"
+				group: "newTabActivate",
+				map: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+				valid: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
 			},
 			afterClose:
 			{
@@ -90,21 +92,25 @@ const prefs = Object.defineProperties((name, value) =>
 			// },
 			optWin:
 			{
+				internal: true,
 				noSync: true,
 				default: []
 			},
 			favicons:
 			{
+				internal: true,
 				noSync: true,
 				default: {}
 			},
 			tabsList:
 			{
+				internal: true,
 				noSync: true,
 				default: []
 			},
 			tabsOrder:
 			{
+				internal: true,
 				noSync: true,
 				default: []
 			},
@@ -287,6 +293,14 @@ const prefsInited = new Promise(resolve =>
 		}
 		if (APP.version !== prefs.version)
 		{
+			// eslint-disable-next-line sonarjs/no-collapsible-if
+			if (compareVersions(prefs.version, "0.1.1.16") < 0)
+			{
+				// eslint-disable-next-line unicorn/no-lonely-if
+				if (prefs.tabsScrollFix === 1)
+					prefs.tabsScrollFix = 5; //300ms
+			}
+			prefs.version = APP.version;
 			save.version = APP.version;
 		}
 

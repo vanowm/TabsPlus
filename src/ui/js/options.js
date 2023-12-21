@@ -116,7 +116,7 @@ const init = ({ data: prefs }) =>
 				+ (prefs[i] && prefs[i].options && !prefs[i].options[data[i]] ? 4 : 0);
 			//                 + (prefs[i] && !prefs[i].options ? 4 : 0)
 			//                 + (i == "version" ? 4 : 0);
-			if (er || i === "version")
+			if (er || i === "version" || prefs[i].internal)
 			{
 				// eslint-disable-next-line unicorn/no-array-reduce
 				debug.debug("skipped", i, "value", data[i], "error code", er, er ? "(" + ["option doesn't exit", "wrong value type", "value out of range"].reduce((a, b, i) => (((er >> i) & 1) ? (a += (a ? ", " : "") + b) : a), "") + ")" : "");
@@ -239,7 +239,10 @@ const init = ({ data: prefs }) =>
 	{
 		const o = {};
 		for (const i in prefs)
-			o[i] = prefs[i].value;
+		{
+			if (!prefs[i].internal)
+				o[i] = prefs[i].value;
+		}
 
 		return o;
 	};

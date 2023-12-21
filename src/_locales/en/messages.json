@@ -65,9 +65,6 @@
 	"iconAction": {
 		"message": "Toolbar button action"
 	},
-	"iconActionNotes": {
-		"message": "These also available via right click"
-	},
 	"iconAction_0": {
 		"message": "Default"
 	},
@@ -133,6 +130,9 @@
 	},
 	"iconAction_desc": {
 		"message": "These also available via right click on toolbar button"
+	},
+	"iconActionNotes": {
+		"message": "These also available via right click"
 	},
 	"minute": {
 		"message": "m"
@@ -255,13 +255,70 @@
 		"message": "tabs"
 	},
 	"tabsScrollFix": {
-		"message": "Vertical tabs fix"
+		"message": "Vertical tabs fix (delay)"
 	},
 	"tabsScrollFix_0": {
-		"message": "No"
+		"message": "No delay"
 	},
 	"tabsScrollFix_1": {
-		"message": "Yes"
+		"message": "100ms"
+	},
+	"tabsScrollFix_2": {
+		"message": "150ms"
+	},
+	"tabsScrollFix_3": {
+		"message": "200ms"
+	},
+	"tabsScrollFix_4": {
+		"message": "250ms"
+	},
+	"tabsScrollFix_5": {
+		"message": "300ms"
+	},
+	"tabsScrollFix_6": {
+		"message": "350ms"
+	},
+	"tabsScrollFix_7": {
+		"message": "400ms"
+	},
+	"tabsScrollFix_8": {
+		"message": "450ms"
+	},
+	"tabsScrollFix_9": {
+		"message": "500ms"
+	},
+	"tabsScrollFix_10": {
+		"message": "550ms"
+	},
+	"tabsScrollFix_11": {
+		"message": "550ms"
+	},
+	"tabsScrollFix_12": {
+		"message": "600ms"
+	},
+	"tabsScrollFix_13": {
+		"message": "650ms"
+	},
+	"tabsScrollFix_14": {
+		"message": "700ms"
+	},
+	"tabsScrollFix_15": {
+		"message": "750ms"
+	},
+	"tabsScrollFix_16": {
+		"message": "800ms"
+	},
+	"tabsScrollFix_17": {
+		"message": "850ms"
+	},
+	"tabsScrollFix_18": {
+		"message": "900ms"
+	},
+	"tabsScrollFix_19": {
+		"message": "950ms"
+	},
+	"tabsScrollFix_20": {
+		"message": "1000ms"
 	},
 	"tabsScrollFix_desc": {
 		"message": "If vertical tabs don't scroll to new tab, enable this"

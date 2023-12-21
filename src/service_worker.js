@@ -250,10 +250,13 @@ const contextMenu = {
 		chrome.contextMenus.remove(menuItem.id, () => chrome.runtime.lastError);
 		const id = chrome.contextMenus.create(menu, () =>
 		{
-			if (chrome.runtime.lastError)
-				debug.trace("contextMenu.add error:", chrome.runtime.lastError.message, menuItem);
-			else
-				debug.trace("contextMenu.add:", menuItem);
+			//must read value from chrome.runtime.lastError in order to hide error in console
+			// eslint-disable-next-line no-unused-vars
+			const lastError = chrome.runtime.lastError;
+			// if (lastError)
+			// 	debug.trace("contextMenu.add error:", chrome.runtime.lastError.message, menuItem);
+			// else
+			// 	debug.trace("contextMenu.add:", menuItem);
 
 		});
 		contextMenu._list.set(id, menuItem);
@@ -267,13 +270,17 @@ const contextMenu = {
 		// debug.trace("contextMenu.remove", {id, menuItem});
 		if (menuItem)
 		{
-			debug.trace("contextMenu.removing:", menuItem);
+			// debug.trace("contextMenu.removing:", menuItem);
 			chrome.contextMenus.remove(id, () =>
 			{
-				if (chrome.runtime.lastError)
-					debug.trace("contextMenu.remove error:", chrome.runtime.lastError.message, menuItem);
-				else
-					debug.trace("contextMenu.remove:", menuItem);
+				//must read value from chrome.runtime.lastError in order to hide error in console
+				// eslint-disable-next-line no-unused-vars
+				const lastError = chrome.runtime.lastError;
+				// if (lastError)
+					// if (chrome.runtime.lastError)
+					// debug.trace("contextMenu.remove error:", chrome.runtime.lastError.message, menuItem);
+				// else
+				// 	debug.trace("contextMenu.remove:", menuItem);
 			});
 		}
 		contextMenu._list.delete(id);
@@ -780,7 +787,9 @@ const tabsHandler = {
 		}
 		// }, 35);
 
-		// fix for EDGE vertical tabs don't scroll to the new tab https://github.com/MicrosoftDocs/edge-developer/issues/1276
+		// fix for EDGE vertical tabs don't scroll to the new tab
+		// https://github.com/MicrosoftDocs/edge-developer/issues/1276
+		// https://github.com/microsoft/MicrosoftEdge-Extensions/discussions/125
 		setAlarm(() =>
 		{
 
@@ -819,7 +828,7 @@ const tabsHandler = {
 
 			setIcon(tab);
 			TABS.updateAll(tab.windowId);
-		}, prefs.newTabActivate === 1 && prefs.tabsScrollFix ? 250 : 0, "onCreated");
+		}, prefs.tabsScrollFix * 50, "onCreated");
 
 		debug.debug("created", TABS.win(tab.windowId), previousTab, tab);
 	}, //onCreated()
@@ -997,6 +1006,15 @@ const tabsHandler = {
 			setIcon(tab);
 		}
 
+		if (tab.favIconUrl)
+		{
+			const favicons = prefs("favicons");
+			if (favicons[tab.url] !== tab.favIconUrl)
+			{
+				favicons[tab.url] = tab.favIconUrl;
+				prefsSave({favicons}, Void);
+			}
+		}
 	//   debug.debug("onUpdated", {tabId, changeInfoStatus: changeInfo.status, tabStatus: tab.status, changeInfo, tab: JSON.parse(JSON.stringify(tab)), tabStored: TABS.find(tabId)});
 	// //debug.debug("onUpdated", tabId, changeInfo, changeInfo.status === "loading", clone(tab));
 	//   TABS.update(Object.assign(changeInfo, {id: tabId, windowId: tab.windowId}));
@@ -1163,6 +1181,67 @@ const setIcon = tab =>
 */
 };
 
+/**
+ * Updates the favicons of tabs in a given tabs list.
+ *
+ * @param {Array} tabsList - The list of tabs to update favicons for.
+ * @param {Object} newFavicons - The object to store the new favicons.
+ * @param {Object} oldFavicons - The object to store the old favicons.
+ */
+const updateFavicons = (tabsList, newFavicons, oldFavicons) =>
+{
+	for(let i = 0; i < tabsList.length; i++)
+	{
+		const tab = tabsList[i].tab || tabsList[i];
+		if (tab.window?.tabs)
+			updateFavicons(tab.window.tabs, newFavicons, oldFavicons);
+
+		if (tab.favIconUrl)
+		{
+			newFavicons[tab.url] = tab.favIconUrl;
+			delete oldFavicons[tab.url];
+		}
+	}
+};
+
+/**
+ * Updates the favicons cache of all closed and opened tabs.
+ * @param {boolean} force - Whether to force the update or not.
+ */
+const updateFaviconsCache = force =>
+{
+	if (!force && updateFaviconsCache.previousUpdate && updateFaviconsCache.previousUpdate + 60_000 > Date.now())
+		return;
+
+	updateFaviconsCache.previousUpdate = Date.now();
+	const favicons = prefs("favicons") || {};
+	const newFavicons = {};
+	const oldFavicons = Object.assign({}, favicons);
+	chrome.sessions.getRecentlyClosed(sessions =>
+	{
+		updateFavicons(sessions, newFavicons, oldFavicons);
+		chrome.tabs.query({})
+			.then(tabs =>
+			{
+				updateFavicons(tabs, newFavicons, oldFavicons);
+				console.log("updateFaviconsCache", {sessions, newFavicons, oldFavicons, favicons});
+				for(const i in oldFavicons)
+					delete favicons[i];
+
+				Object.assign(favicons, newFavicons);
+				prefs("favicons", favicons);
+				return tabs;
+			})
+			.finally(() =>
+			{
+				setAlarm(updateFaviconsCache, 60_000, "updateFaviconsCache");
+			})
+			.catch(error => debug.error("tabsQuery", error));
+	});
+
+};
+updateFaviconsCache();
+
 // messaging
 chrome.runtime.onMessage.addListener(messagesHandler.onMessage);
 
@@ -1190,37 +1269,11 @@ chrome.contextMenus.onClicked.addListener(onWrapper((info, tab) =>
 }));
 
 chrome.action.onClicked.addListener(onWrapper(actionButton));
-
-const updateFavicons = (sessions, newFavicons, oldFavicons) =>
-{
-	for(let i = 0; i < sessions.length; i++)
-	{
-		const session = sessions[i].tab || sessions[i];
-		if (session?.window?.tabs)
-			updateFavicons(session.window.tabs, newFavicons, oldFavicons);
-
-		if (session.favIconUrl)
-		{
-			newFavicons[session.url] = session.favIconUrl;
-			delete oldFavicons[session.url];
-		}
-	}
-};
-
 chrome.sessions.onChanged.addListener((...args) =>
 {
 	debug.debug("session.onChanged", args);
-	chrome.sessions.getRecentlyClosed(sessions =>
-	{
-		const favicons = prefs("favicons");
-		const newFavicons = {};
-		const oldFavicons = Object.assign({}, favicons);
-		updateFavicons(sessions, newFavicons, oldFavicons);
-		for(const i in oldFavicons)
-			delete favicons[i];
 
-		Object.assign(favicons, newFavicons);
-		prefs("favicons", favicons);
-	});
+	//update favicons cache
+	updateFaviconsCache(true);
 	contextMenu.createContextMenu();
 });
