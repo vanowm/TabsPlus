@@ -20,6 +20,9 @@
 	"backup_file": {
 		"message": "Backup to file"
 	},
+	"closedTabs": {
+		"message": "Recently closed tabs"
+	},
 	"contextMenu": {
 		"message": "Context menu"
 	},
@@ -28,9 +31,6 @@
 	},
 	"contextMenu_1": {
 		"message": "Yes"
-	},
-	"contextMenu_closedTabs": {
-		"message": "Recently closed tabs"
 	},
 	"contextMenu_copy": {
 		"message": "Copy URL"
@@ -43,6 +43,9 @@
 	},
 	"contextMenu_lastUsed": {
 		"message": "Switch to last used tab"
+	},
+	"contextMenu_window": {
+		"message": "Window"
 	},
 	"day": {
 		"message": "d"

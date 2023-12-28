@@ -26,7 +26,7 @@ body
 	/* font-family: tahoma; */
 	font-size: 0.9em;
 	opacity: 1;
-	transition: opacity 0.3s;
+	/* transition: opacity 0.1s; */
 	-webkit-user-select: none;
 	user-select: none;
 }
@@ -189,7 +189,7 @@ select
 .default
 {
 	font-style: italic;
-	font-weight: bolder;
+	font-weight: 900;
 	/* text-shadow: 1px 0px 0px #000; */
 }
 

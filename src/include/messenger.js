@@ -43,3 +43,80 @@ const messenger = (() =>
 		offMessage: callback => onMessage.delete(callback)
 	});
 })();
+
+/**
+ * Object representing the message handler for the service worker.
+ * @type {Object}
+ */
+const messagesHandler = {
+	_tabs: new Map(),
+	_ports: new Map(),
+
+	onMessage: (message, sender, _sendResponse) =>
+	{
+		const isPort = _sendResponse === undefined;
+		const port = sender;
+		if (isPort)
+		{
+			_sendResponse = port.postMessage.bind(port);
+			sender = sender.sender;
+		}
+		debug.debug("messageHandler", {message, port, sender, _sendResponse});
+		if (sender.id !== chrome.runtime.id)
+			return;
+
+		const sendResponse = (...args) => (debug.debug("messageHandler sendResponse", sender.url, args), _sendResponse.apply(_sendResponse, args));
+		switch (message.type)
+		{
+			case "tab": {
+				if (isPort)
+				{
+					messagesHandler._ports.set(port, message.data);
+					messagesHandler._tabs.set(message.data.id, message.data);
+					actionButton.setIcon(message.data);
+				}
+
+				break;
+			}
+
+			case "settings": {
+				SETTINGS.$inited.then(data =>
+				{
+					sendResponse({type: "settings", data});
+					return data;
+				}).catch(error => debug.error("settingsInited", error));
+				break;
+			}
+
+			case "setting": {
+				sendResponse(SETTINGS(message.name, message.value));
+
+				if (message.name === "syncSettings")
+				{
+					STORAGE = chrome.storage[message.value ? "sync" : "local"];
+					const o = {};
+					o[message.name] = message.value;
+					SETTINGS.$save(o, Void);
+				}
+				break;
+			}
+
+		}
+		return true;
+	}, //onMessage();
+
+	onConnect: port =>
+	{
+		messagesHandler._ports.set(port, null);
+		debug.debug("onConnect", port);
+	},
+
+	onDisconnect: port =>
+	{
+		const tab = messagesHandler._ports.get(port);
+		messagesHandler._ports.delete(port);
+		messagesHandler._tabs.delete(tab.id);
+		actionButton.setIcon(tab);
+	}
+
+};// messengerHandler

@@ -6,7 +6,6 @@
 	--menu-bg-color: #f7f7f7;
 	--color: unset;
 	--background-color: white;
-	--menu-border-width: 0.8em;
 	--date-border: #CACACA;
 }
 
@@ -23,14 +22,17 @@ body
 .index
 {
 	padding: 1em 0 0.8em 0.5em;
+	padding: 0 0 0 0.5em;
 	grid-area: index;
+	line-height: 3em;
 	text-align: right;
 	vertical-align: top;
 }
 
 .menu > .index
 {
-	padding: 0.5em 0 0.5em 0.5em;
+	padding: 0.7em 0 0.5em 0.5em;
+	line-height: 1em;
 }
 
 .tabs .index
@@ -47,6 +49,12 @@ body
 	width: max-content;
 }
 
+.container
+{
+	--offset: calc(calc(var(
+	--index-length) + 0.3em) / 1.5);
+	/* margin: 0.1em; */
+}
 
 table
 {
@@ -61,6 +69,8 @@ table
 	grid-template-areas:
 		"index content date";
 	grid-template-columns: var(--index-length-tabs, var(--index-length)) 1fr 0;
+	/* padding: 0.1em; */
+	/* margin: -0.1em; */
 }
 
 td > *
@@ -87,10 +97,14 @@ td > *
 	border-top: 1px dotted rgb(128 128 128 / 30%);
 }
 
+.container:not(.tabs) > .option > .content > .content-box > div
+{
+	margin-right: calc(var(--offset) / 2);
+}
 
 .title
 {
-	padding: 0.2em 0 0;
+	/* padding: 0.2em 0 0; */
 	font-weight: bold;
 	text-align: left;
 }
@@ -108,8 +122,24 @@ td > *
 
 .sub
 {
+	z-index: 1;
 	display: inline-block;
-	padding: 0.2em 0.5em;
+	padding: 0.3em 0.5em 0;
+	border: 1px solid transparent;
+	line-height: 2.5em;
+}
+
+.sub::before
+{
+	content: "▼";
+	font-size: 0.8em;
+	line-height: 2em;
+	vertical-align: super;
+}
+
+.option.open .sub::before
+{
+	content: "▲";
 }
 
 .item
@@ -121,29 +151,50 @@ td > *
 {
 	position: absolute;
 	top: 0;
-	right: 0;
+	right: 0.3em;
 	min-width: 2ch;
 	height: 4em;
-	padding: 0 0.3em;
+	padding: 0.2em 0.3em;
 	font-size: 0.8em;
 	font-weight: normal;
 }
 
+.date[data-date]::before
+{
+	position: absolute;
+	top: 0;
+	right: 0;
+	display: inline-block;
+	width: max-content;
+	height: max-content;
+	padding: 0.05em 0.2em;
+	border: 1px solid var(--date-border);
+	border-radius: 0.4em;
+	background-color: var(--background-color);
+	content: attr(data-date);
+	opacity: var(--opacity, 0.6);
+}
+
+.date:hover
+{
+	--opacity: 1;
+}
+
 .tabs
 {
-	--offset: calc(calc(var(--index-length) + 0.3em) / 1.5);
-
 	position: relative;
 	left: calc(0.0em - var(--offset));
 	display: grid;
 	width: calc(100% + calc(var(--offset) / 2));
-	margin: 0 0 0.5em;
+	padding: 1em;
+	margin: -1em -1em -0.3em;
 }
 
-body[contextMenu] > *:not(#contextMenu) *
+
+/* body[contextMenu] > *:not(#contextMenu) *
 {
 	pointer-events: none;
-}
+} */
 
 .open
 {
@@ -155,18 +206,38 @@ body[contextMenu] > *:not(#contextMenu) *
 .menu > .content > .content-box > .title
 {
 	width: var(--window-title-length);
+	/* padding-top: 0.2em; */
+}
+
+body[contextMenu] .option:not(.highlight)
+{
+	filter: grayscale(100%) blur(1px);
+	opacity: 0.5;
 }
 
 .item:hover,
-.sub:hover,
-.option:not(:has(.sub:hover,.option:hover)):hover
+.option.highlight,
+body:not([contextMenu]) .sub:hover,
+body:not([contextMenu]) .option:not(:has(.sub:hover,.option:hover)):hover
 {
 	--background-color: var(--hover-bg-color);
 	--color: var(--hover-color);
 
+	z-index: 2;
+	border-radius: 0.1em;
 	background-color: var(--background-color);
+	box-shadow: 0 0 1em 0 rgb(0 0 0 / 35%);
 	color: var(--color);
 	cursor: default;
+	outline: 1px solid rgb(0 0 0 / 35%);
+}
+
+.item:hover,
+body:not([contextMenu]) .sub:hover
+{
+	border-color: rgb(0 0 0 / 35%);
+	border-radius: 0;
+	outline: 0;
 }
 
 .hidden
@@ -183,14 +254,16 @@ body[contextMenu] > *:not(#contextMenu) *
 .content-box
 {
 	display: inline-block;
-	max-width: 58em;
+	max-width: calc(62em - var(--index-length));
 	padding: 0.2em 0;
 	margin: 0;
 }
 
 .no-url .content-box
 {
-	line-height: 2.2em;
+	height: 100%;
+	padding: 0;
+	line-height: 3em;
 	vertical-align: middle;
 }
 
@@ -215,10 +288,17 @@ body[contextMenu] > *:not(#contextMenu) *
 .menu > .content > .content-box
 {
 	display: inline-flex;
-	justify-content: flex-start;
+	max-width: 59em;
+	height: 2.5em;
 	padding: 0;
-	line-height: 2.0em;
+	line-height: 2.5em;
 }
+
+.tabs > .option > .content > .content-box
+{
+	max-width: 58em;
+}
+
 
 .url
 {
@@ -227,19 +307,42 @@ body[contextMenu] > *:not(#contextMenu) *
 	opacity: 0.5;
 }
 
-.favicon,
-.faviconPlaceholder
+.favicon
 {
-	width: 1.5em;
-	margin: 0.8em 0.3em 0.8em 0.5em;
+	--favicon-size: 24px;
+	--favicon-border: 0px;
+	--favicon-margin: calc(var(--favicon-border) / 2);
+	--favicon-width: var(--favicon-size);
+
+	width: var(--favicon-width);
+	margin: calc(0.6em + var(--favicon-margin)) calc(0.3em + var(--favicon-margin)) 0 calc(0.5em + var(--favicon-margin));
+	object-fit: contain;
 	vertical-align: top;
 }
 
-.option > .container
+.favicon[src=""]
 {
-	width: auto;
-	padding: 0 var(--menu-border-width) var(--menu-border-width) var(--menu-border-width);
-	grid-area: tabs;
+	--favicon-border: 3px;
+	--favicon-width: calc(var(--favicon-size) - var(--favicon-border));
+
+	display: inline-block;
+	height: var(--favicon-width);
+	outline: 1px dotted rgb(128 128 128 / 50%);
+	/* margin-top: calc(0.7em + var(--favicon-margin)); */
+}
+
+.favicon[src=""]::before
+{
+	display: block;
+	height: 100%;
+	content: "";
+}
+
+.no-url .favicon
+{
+	margin-top: 0;
+	margin-bottom: 0;
+	vertical-align: middle;
 }
 
 #contextMenu
@@ -253,38 +356,16 @@ body[contextMenu] > *:not(#contextMenu) *
 	white-space: nowrap;
 }
  
-.sub::before
-{
-	content: "▼";
-	font-size: 0.8em;
-}
-
-.option.open .sub::before
-{
-	content: "▲";
-}
-
 #empty,
 #templates,
 body.no-date .date,
 /* .menu .option .date, */
 body:not([contextMenu]) > #contextMenu,
-.favicon[src=""],
 .option:not(.open) .container,
 .no-url .url,
-.faviconPlaceholder,
 .collapsed
 {
 	display: none;
-}
-
-.favicon[src=""] + .faviconPlaceholder
-{
-	position: relative;
-	display: inline-block;
-	width: 16px;
-	height: 16px;
-	border: 1px dotted rgb(128 128 128 / 50%);
 }
 
 #copy::before

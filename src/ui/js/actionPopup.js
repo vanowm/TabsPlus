@@ -2,7 +2,7 @@
 
 (() =>
 {
-const prefs = {};
+const settings = {};
 let inited = false;
 let contextMenuOption = null;
 let elMenu = null;
@@ -11,6 +11,9 @@ let elTemplateOption = null;
 let elTemplateMenu = null;
 let elCopyTitle = null;
 let windowTitleLength = 0;
+const app = chrome.runtime.getManifest();
+
+template({app});
 
 chrome.sessions.onChanged.addListener(() => setTimeout(init, 100));
 
@@ -24,30 +27,26 @@ const messenger = reconnected =>
 		debug.debug("popup onMessage", message);
 		switch (message.type)
 		{
-			case "prefs": /* this start init */
+			case "settings": /* this start init */
 			{
 				for (const i in message.data)
-				{
-					if (!(i in prefs))
-						prefs[i] = {};
+					settings[i] = message.data[i];
 
-					Object.assign(prefs[i], message.data[i]);
-				}
 				if (!reconnected)
 					init();
 
 				break;
 			}
-			case "prefChanged":
+			case "settingChanged":
 			{
-				prefs[message.name].value = message.newValue;
+				settings[message.name].value = message.newValue;
 				init(message.name);
 				break;
 			}
 		}
 	});
 	port.onDisconnect.addListener(messenger); //this will allow us automatically reconnect
-	port.postMessage({ type: "prefs" }); //get prefs and start initialization
+	port.postMessage({ type: "settings" }); //get settings and start initialization
 	tab.then(_tab => port.postMessage({ type: "tab", data: _tab }))
 		.catch(error => debug.error("popup messenger", error));
 };
@@ -67,6 +66,9 @@ const aDates = [];
 
 const relativeDate = date =>
 {
+	if (!date)
+		return "n/a";
+
 	const diff = Math.round((Date.now() - new Date(date)) / 1000);
 
 	const minute = 60;
@@ -134,7 +136,7 @@ const getOption = ({ elContainer, sessions, windowIndex, index, indexLength}) =>
 		if (windowTitleLength < title.length)
 			windowTitleLength = title.length;
 
-		if (prefs.expandWindow.value)
+		if (settings.expandWindow.value)
 			option.classList.add("open");
 
 	}
@@ -143,7 +145,7 @@ const getOption = ({ elContainer, sessions, windowIndex, index, indexLength}) =>
 		option = elTemplateOption.cloneNode(true);
 		session = sessionItem.tab || sessionItem;
 		const url = session.url;
-		favicon = session.favIconUrl || prefs.favicons.value[url] || "";
+		favicon = session.favIconUrl || settings.favicons.value[url] || settings.favicons.value[new URL(url).hostname] || "";
 		title = session.title;
 		const elUrl = option.querySelector(".url");
 		elUrl.textContent = url;
@@ -161,12 +163,19 @@ const getOption = ({ elContainer, sessions, windowIndex, index, indexLength}) =>
 	elTitle.textContent = title;
 
 	const elDate = option.querySelector(":scope > .date");
-	const date = new Date(sessionItem.lastModified * 1000).toString();
-	elDate.title = date.split(" ").slice(0, 5).join(" ");//.toLocaleString("sv");
+	let sDateTitle = "";
+	if (sessionItem.lastModified)
+	{
+		const date = new Date(sessionItem.lastModified * 1000).toString();
+		sDateTitle = date.split(" ").slice(0, 5).join(" ");//.toLocaleString("sv");
+	}
+	elDate.title = sDateTitle;
 	if (!windowIndex)
 	{
 		elDate.textContent = sDate;
-		aDates.push(elDate);
+		elDate.dataset.date = sDate;
+		if (sessionItem.lastModified)
+			aDates.push(elDate);
 	}
 
 	option.addEventListener("click", onClick({ option, session }));
@@ -207,15 +216,17 @@ const contextMenuClose = evt =>
 		let close = false;
 		if (evt.target === elCopy)
 		{
-			debug.debug(contextMenuOption.dataset.url);
-			navigator.clipboard.writeText(contextMenuOption.dataset.url);
+			const url = contextMenuOption.querySelector(".url").textContent;
+			debug.debug(url);
+			navigator.clipboard.writeText(url);
 			close = true;
 			// return;
 		}
 		else if (evt.target === elCopyTitle)
 		{
-			debug.debug(contextMenuOption.dataset.title);
-			navigator.clipboard.writeText(contextMenuOption.dataset.title);
+			const title = contextMenuOption.querySelector(".title").textContent;
+			debug.debug(title);
+			navigator.clipboard.writeText(title);
 			close = true;
 			// return;
 		}
@@ -230,35 +241,39 @@ const contextMenuClose = evt =>
 	contextMenuOption = null;
 };
 
-document.title = chrome.i18n.getMessage("contextMenu_closedTabs");
+// document.title = chrome.i18n.getMessage("contextMenu_closedTabs");
 let lastTimestamp;
 
-const timeLoop = timestamp =>
+const dateLoop = timestamp =>
 {
 	if (timestamp - lastTimestamp > 1000)
 	{
 		lastTimestamp = timestamp;
-		if (prefs.showDate.value)
+		if (settings.showDate.value)
 		{
 			for(let i = 0; i < aDates.length; i++)
-				aDates[i].textContent = relativeDate(aDates[i].title);
+			{
+				const sDate = relativeDate(aDates[i].title);
+				aDates[i].dataset.date = sDate;
+				aDates[i].textContent = sDate;
+			}
 		}
 	}
-	requestAnimationFrame(timeLoop);
+	requestAnimationFrame(dateLoop);
 };
 
-const init = pref =>
+const init = setting =>
 {
-	document.body.classList.toggle("no-date", !prefs.showDate.value);
-	document.body.classList.toggle("no-url", !prefs.showUrl.value);
+	document.body.classList.toggle("no-date", !settings.showDate.value);
+	document.body.classList.toggle("no-url", !settings.showUrl.value);
 	lastTimestamp = 0;
-	if (pref)
+	if (setting)
 	{
-		if (pref === "expandWindow")
+		if (setting === "expandWindow")
 		{
 			const nlMenus = document.querySelectorAll(".menu");
 			for (let i = 0; i < nlMenus.length; i++)
-				nlMenus[i].classList.toggle("open", prefs.expandWindow.value);
+				nlMenus[i].classList.toggle("open", settings.expandWindow.value);
 		}
 		return;
 	}
@@ -355,12 +370,12 @@ const init = pref =>
 		debug.debug("blur", evt);
 	});
 
-	timeLoop();
+	dateLoop();
 	inited = true;
 }; //init()
 
 window.addEventListener("DOMContentLoaded", () =>
 {
-	document.documentElement.classList.remove("notLoaded");
+	document.documentElement.classList.remove("loading");
 }, { once: true });
 })();

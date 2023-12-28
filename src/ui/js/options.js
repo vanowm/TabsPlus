@@ -2,50 +2,14 @@ debug.debug("options", performance.now());
 
 const $ = id => document.getElementById(id);
 const app = chrome.runtime.getManifest();
-const _ = chrome.i18n.getMessage;
 const Void = () => {};
 
 if (!app.version_name)
 	app.version_name = app.version;
 
-new Promise(resolve =>
-{
-	const tags = {
-		app: app,
-		undefined: new Proxy({},
-			{
-				get: (object, name) => (Object.hasOwnProperty.call(object, name) ? object[name] : _(name)),
-			})
-	};
-	const i18n = (() =>
-	{
-		const i18nRegExp = /\${((\w+)\.)?([^}]+)}/g;
-		const i18nRepl = (a, b, c, d) => tags[c][d];
-		return text => text.replace(i18nRegExp, i18nRepl);
-	})();
+template({app});
 
-	// eslint-disable-next-line prefer-arrow-functions/prefer-arrow-functions
-	(function loop (node)
-	{
-		if (node.attributes)
-			for (let i = 0; i < node.attributes.length; i++)
-				node.attributes[i].value = i18n(node.attributes[i].value);
-
-		if (node.childNodes.length === 0)
-			node.textContent = i18n(node.textContent);
-		else
-			for (let i = 0; i < node.childNodes.length; i++)
-				loop(node.childNodes[i]);
-	})(document.body.parentNode);
-	resolve();
-});
-
-// init({data: {
-//   optWin: {},
-//   iconAction: {},
-//   expandWindow: {options:[]},
-// }});
-const init = ({ data: prefs }) =>
+const init = ({ data: settings }) =>
 {
 	debug.debug("options init", performance.now());
 	const elOptionsTable = document.querySelector("#options > .table");
@@ -66,7 +30,7 @@ const init = ({ data: prefs }) =>
 	// {
 	//   switch(message.type)
 	//   {
-	//     case "prefChanged":
+	//     case "settingChanged":
 	//       setOption(message.name, message.newValue, false);
 	//       break;
 
@@ -111,12 +75,12 @@ const init = ({ data: prefs }) =>
 		const r = { restored: [], error: [] };
 		for (const i in data)
 		{
-			const er = (!prefs[i] && 1)
-				+ (prefs[i] && (typeof (prefs[i].default)) !== typeof (data[i]) ? 2 : 0)
-				+ (prefs[i] && prefs[i].options && !prefs[i].options[data[i]] ? 4 : 0);
-			//                 + (prefs[i] && !prefs[i].options ? 4 : 0)
+			const er = (!settings[i] && 1)
+				+ (settings[i] && (typeof (settings.$default[i])) !== typeof (data[i]) ? 2 : 0)
+				+ (settings[i] && settings.$options[i] && !settings.$options[i][data[i]] ? 4 : 0);
+			//                 + (settings[i] && !settings[i].options ? 4 : 0)
 			//                 + (i == "version" ? 4 : 0);
-			if (er || i === "version" || prefs[i].internal)
+			if (er || i === "version" || settings.$internal[i])
 			{
 				// eslint-disable-next-line unicorn/no-array-reduce
 				debug.debug("skipped", i, "value", data[i], "error code", er, er ? "(" + ["option doesn't exit", "wrong value type", "value out of range"].reduce((a, b, i) => (((er >> i) & 1) ? (a += (a ? ", " : "") + b) : a), "") + ")" : "");
@@ -133,12 +97,12 @@ const init = ({ data: prefs }) =>
 
 	const reset = () =>
 	{
-		for (const o in prefs)
+		for (const o in settings)
 		{
-			if (!["version"].includes(o))
+			if (settings[o].label)
 			{
-				prefs[o].value = prefs[o].default;
-				setOption(o, prefs[o].value, o !== "optWin");
+				settings[o].value = settings[o].default;
+				setOption(o, settings[o].value, o !== "optWin");
 			}
 		}
 		elOptWin.style.width = 0;
@@ -152,12 +116,12 @@ const init = ({ data: prefs }) =>
 	{
 		const option = evt.target;
 		const value = ~~(option.type === "checkbox" ? option.checked : option.value);
-		option.classList.toggle("default", value === prefs[option.id].default);
-		prefs[option.id].value = value;
+		option.classList.toggle("default", value === settings[option.id].default);
+		settings[option.id].value = value;
 		let o = {};
 		o[option.id] = value;
-		if (onChange[prefs[option.id].onChange] instanceof Function)
-			onChange[prefs[option.id].onChange](option.id, value);
+		if (onChange[settings[option.id].onChange] instanceof Function)
+			onChange[settings[option.id].onChange](option.id, value);
 
 		// eslint-disable-next-line sonarjs/no-small-switch
 		switch (option.id)
@@ -175,7 +139,7 @@ const init = ({ data: prefs }) =>
 		{
 			chrome.runtime.sendMessage(null,
 				{
-					type: "pref",
+					type: "setting",
 					name: i,
 					value: o[i]
 				}, Void);
@@ -187,17 +151,17 @@ const init = ({ data: prefs }) =>
 	const enableDisable = () =>
 	{
 		const ids = {
-			expandWindow: prefs.iconAction.value !== ACTION_LIST,
-			showDate: prefs.iconAction.value !== ACTION_LIST,
-			showUrl: prefs.iconAction.value !== ACTION_LIST,
-			tabsScrollFix: 	prefs.newTabActivate.value !== 1,
-			newTabPageOnly: prefs.newTabActivate.value !== 1,
-			newTabPageSkip: !prefs.newTabActivate.value || prefs.afterClose.value !== 1
+			expandWindow:	settings.iconAction.value !== ACTION_LIST,
+			showDate:		settings.iconAction.value !== ACTION_LIST,
+			showUrl:		settings.iconAction.value !== ACTION_LIST,
+			tabsScrollFix:	settings.newTabActivate.value !== 1,
+			newTabPageOnly:	settings.newTabActivate.value !== 1,
+			newTabPageSkip:	!settings.newTabActivate.value || settings.afterClose.value !== 1
 		};
 		for(const id in ids)
 		{
-			prefs[id].input.disabled = ids[id];
-			prefs[id].input.closest(".row").classList.toggle("disabled", ids[id]);
+			settings[id].input.disabled = ids[id];
+			settings[id].input.closest(".row").classList.toggle("disabled", ids[id]);
 		}
 	};
 
@@ -206,14 +170,14 @@ const init = ({ data: prefs }) =>
 		const elOpt = $(id);
 		if (!elOpt)
 		{
-			if (onChange[prefs[id].onChange] instanceof Function)
-				onChange[prefs[id].onChange](id, value);
+			if (onChange[settings[id].onChange] instanceof Function)
+				onChange[settings[id].onChange](id, value);
 
 			if (save || save === undefined)
 			{
 				chrome.runtime.sendMessage(null,
 					{
-						type: "pref",
+						type: "setting",
 						name: id,
 						value: value
 					}, Void);
@@ -238,10 +202,10 @@ const init = ({ data: prefs }) =>
 	const getBackupData = () =>
 	{
 		const o = {};
-		for (const i in prefs)
+		for (const i in settings)
 		{
-			if (!prefs[i].internal)
-				o[i] = prefs[i].value;
+			if (!settings[i].internal)
+				o[i] = settings[i].value;
 		}
 
 		return o;
@@ -351,8 +315,8 @@ const init = ({ data: prefs }) =>
 			~~(elOptWin.style.height ? Number.parseFloat(elOptWin.style.height) : rectOptWin.height),
 			~~elOptWin.classList.contains("maximized")];
 
-		const optWinPrevious = "" + prefs.optWin.value;
-		prefs.optWin.value = position;
+		const optWinPrevious = "" + settings.optWin.value;
+		settings.optWin.value = position;
 
 		if (!savePos.timer)
 		{
@@ -364,7 +328,7 @@ const init = ({ data: prefs }) =>
 				if (!savePos.timer)
 					savePos.timer = setInterval(loop, 100);
 
-				if ("" + savePos.optWin === "" + prefs.optWin.value)
+				if ("" + savePos.optWin === "" + settings.optWin.value)
 				{
 					clearInterval(savePos.timer);
 					savePos.timer = null;
@@ -372,18 +336,18 @@ const init = ({ data: prefs }) =>
 					i = time;
 				}
 				else
-					savePos.optWin = prefs.optWin.value;
+					savePos.optWin = settings.optWin.value;
 
 				if (++i > time || !i)
 				{
 					i = 0;
-					if ("" + prefs.optWin.value !== "" + savePos.optWin && "" + prefs.optWin.value !== optWinPrevious)
+					if ("" + settings.optWin.value !== "" + savePos.optWin && "" + settings.optWin.value !== optWinPrevious)
 					{
 						chrome.runtime.sendMessage(null,
 							{
-								type: "pref",
+								type: "setting",
 								name: "optWin",
-								value: prefs.optWin.value
+								value: settings.optWin.value
 							}, () =>
 							{
 								backupRestore();
@@ -397,7 +361,7 @@ const init = ({ data: prefs }) =>
 		}
 	};
 
-	const updatePos = (position = prefs.optWin.value) =>
+	const updatePos = (position = settings.optWin.value) =>
 	{
 		if (!Array.isArray(position))
 			position = [];
@@ -424,27 +388,27 @@ const init = ({ data: prefs }) =>
 	};
 
 	let rectOptWin;
-	for (const prefId in prefs)
+	for (const prefId in settings)
 	{
-		if (!prefs[prefId].options)
+		if (!settings[prefId].options)
 			continue;
 
-		const group = (prefs[prefId].group && elOptionsTable.querySelector('[group="' + prefs[prefId].group + '"]')) || elTemplate.cloneNode(false);
+		const group = (settings[prefId].group && elOptionsTable.querySelector('[group="' + settings[prefId].group + '"]')) || elTemplate.cloneNode(false);
 		const row = elTemplate.querySelector(".row").cloneNode(true);
 		group.append(row);
 
-		if (prefs[prefId].group)
+		if (settings[prefId].group)
 		{
-			group.setAttribute("group", prefs[prefId].group);
+			group.setAttribute("group", settings[prefId].group);
 		}
 		row.id = prefId + "Box";
 
-		let value = prefs[prefId].value;
-		const isBool = prefs[prefId].options.length === 2;
+		let value = settings[prefId].value;
+		const isBool = settings[prefId].options.length === 2;
 		const elOption = isBool ? document.createElement("input") : row.querySelector("select");
 
-		if (value === undefined || value < 0 || value > prefs[prefId].options.length)
-			value = prefs[prefId].default;
+		if (value === undefined || value < 0 || value > settings[prefId].options.length)
+			value = settings[prefId].default;
 
 		if (isBool)
 		{
@@ -457,35 +421,35 @@ const init = ({ data: prefs }) =>
 		else
 		{
 			row.classList.add("select");
-			debug.debug(prefs);
-			for (let i = 0, elOptTemplate = document.createElement("option"); i < prefs[prefId].options.length; i++)
+			debug.debug(settings);
+			for (let i = 0, elOptTemplate = document.createElement("option"); i < settings[prefId].options.length; i++)
 			{
 				const elOpt = elOptTemplate.cloneNode(true);
-				elOpt.value = prefs[prefId].options[i].id;
-				elOpt.textContent = prefs[prefId].options[i].name;
-				if (prefs[prefId].options[i].description)
-					elOpt.title = prefs[prefId].options[i].description;
+				elOpt.value = settings[prefId].options[i].id;
+				elOpt.textContent = settings[prefId].options[i].name;
+				if (settings[prefId].options[i].description)
+					elOpt.title = settings[prefId].options[i].description;
 
-				const defaultValue = prefs[prefId].map ? prefs[prefId].map.indexOf(prefs[prefId].default) : prefs[prefId].default;
+				const defaultValue = settings[prefId].map ? settings[prefId].map.indexOf(settings[prefId].default) : settings[prefId].default;
 				if (defaultValue === i)
 					elOpt.className = "default";
 
 				elOption.append(elOpt);
 			}
 			elOption.value = value;
-			elOption.classList.toggle("default", value === prefs[prefId].default);
+			elOption.classList.toggle("default", value === settings[prefId].default);
 		}
-		prefs[prefId].input = elOption;
+		settings[prefId].input = elOption;
 		elOption.addEventListener("input", onChange);
 		elOption.id = prefId;
 		if (elOption.selectedOptions)
 			elOption.title = elOption.selectedOptions[0].textContent;
 
-		if (prefs[prefId].description)
+		if (settings[prefId].description)
 		{
-			row.title = prefs[prefId].description;
+			row.title = settings[prefId].description;
 		}
-		row.querySelector(".label").textContent = prefs[prefId].label;
+		row.querySelector(".label").textContent = settings[prefId].label;
 		elOptionsTable.append(group);
 		row.addEventListener("click", evt =>
 		{
@@ -502,10 +466,10 @@ const init = ({ data: prefs }) =>
 				elOption.focus();
 			}
 		});
-		if (onChange[prefs[prefId].onChange] instanceof Function)
-			onChange[prefs[prefId].onChange](prefId, value);
+		if (onChange[settings[prefId].onChange] instanceof Function)
+			onChange[settings[prefId].onChange](prefId, value);
 
-	}//for(o in prefs)
+	}//for(o in settings)
 
 	window.addEventListener("keydown", evt =>
 	{
@@ -616,8 +580,6 @@ const init = ({ data: prefs }) =>
 	debug.debug("performance", performance.now());
 };//init()
 
-const pad = t => ("" + t).padStart(2, "0");
-
-chrome.runtime.sendMessage(null, { type: "prefs" })
+chrome.runtime.sendMessage(null, { type: "settings" })
 	.then(init)
 	.catch(error => debug.trace("options", error, chrome.runtime.onError));

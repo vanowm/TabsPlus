@@ -30,9 +30,7 @@ module.exports = {
 		"setAlarm": true,
 		"TABS": true,
 		"CLONE": true,
-		"prefs": true,
-		"prefsInited": true,
-		"prefsSave": true,
+		"SETTINGS": true,
 		"pad": true,
 		"ACTION_FREEZE": true,
 		"ACTION_UNFREEZE": true,
@@ -47,10 +45,18 @@ module.exports = {
 		"messenger": true,
 		"contextMenu": true,
 		"APP": true,
-		"setIcon": true,
 		"setContext": true,
 		"Void": true,
 		"compareVersions": true,
+		"actionButton": true,
+		"Favicons": true,
+		"messagesHandler": true,
+		"tabsHandler": true,
+		"unloadTabs": true,
+		"BitWiseAnd": true,
+		"centerString": true,
+		"template": true,
+		"_": true,
 	},
 
 	"ignorePatterns": [
@@ -156,6 +162,13 @@ module.exports = {
 				]
 			}
 		},
+		{
+			"files": "src/include/*.js",
+			"rules":
+			{
+				"no-unused-vars": "off"
+			}
+		}
 
 	],
 	"parserOptions": {

@@ -1,49 +1,49 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${app.name} ${options}</title>
-  <link rel="stylesheet" href="style/options.css"/>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>${app.name} ${options}</title>
+	<link rel="stylesheet" href="style/options.css"/>
 </head>
 
 <body class="hide">
-  <div id="options_window" class="options_table">
-    <div id="header">
-      <span id="title">
-        ${app.name}
-        <span class="ver">
-          v${app.version_name}
-        </span>
-      </span>
-      <span>
-        ${options}
-      </span>
-      <span id="exit">&#10006;</span>
-    </div>
-    <div id="options" class="options">
-      <div class="table">
-        <div class="group">
-          <div class="row">
-            <span class="label"></span>
-            <label class="option"><select title="default"></select></label>
-          </div>
-        </div>
-      </div>
-      <div id="backupRestoreBox">
-        <textarea id="backupRestore" title="Settings string" placeholder="" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
-        <div class="backupRestoreControls">
-          <button id="restore">${restore}</button>
-          <button id="restoreFile">${restoreFile}</button>
-          <button id="backup">${backup_file}</button>
-          <button id="reset">${reset}</button>
-        </div>
-      </div>
-    </div>
-  </div>
-  <script type="text/javascript" src="../include/common.js"></script>
-  <script type="text/javascript" src="../include/debug.js"></script>
-  <script type="text/javascript" src="js/options.js"></script>
+	<div id="options_window" class="options_table">
+		<div id="header">
+			<span id="title">
+				${app.name}
+				<span class="ver">
+					v${app.version_name}
+				</span>
+			</span>
+			<span>
+				${options}
+			</span>
+			<span id="exit">&#10006;</span>
+		</div>
+		<div id="options" class="options">
+			<div class="table">
+				<div class="group">
+					<div class="row">
+						<span class="label"></span>
+						<label class="option"><select title="default"></select></label>
+					</div>
+				</div>
+			</div>
+			<div id="backupRestoreBox">
+				<textarea id="backupRestore" title="Settings string" placeholder="" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
+				<div class="backupRestoreControls">
+					<button id="restore">${restore}</button>
+					<button id="restoreFile">${restoreFile}</button>
+					<button id="backup">${backup_file}</button>
+					<button id="reset">${reset}</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script src="../include/common.js"></script>
+	<script src="../include/debug.js"></script>
+	<script src="../include/template.js"></script>
+	<script src="js/options.js"></script>
 </body>
 </html>

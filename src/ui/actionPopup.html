@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="loading">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<title>Map</title>
+		<title>${app.name} - ${closedTabs}</title>
 		<link rel="stylesheet" href="style/actionPopup.css" />
 	</head>
 	<body>
@@ -12,8 +12,7 @@
 			<div class="option">
 				<div class="index"></div>
 				<div class="content">
-					<img class="favicon" title="favicon" />
-					<span class="faviconPlaceholder"></span>
+					<img class="favicon" alt="favicon" />
 					<span class="content-box">
 						<div class="title"></div>
 						<div class="url"></div>
@@ -24,7 +23,10 @@
 			<div class="option menu">
 				<div class="index"></div>
 				<div class="content">
-					<div class="content-box"><span class="sub"></span><span class="title"></span></div>
+					<div class="content-box">
+						<span class="sub"></span>
+						<span class="title"></span>
+					</div>
 					<div class="container tabs"></div>
 				</div>
 				<div class="date"></div>
@@ -36,6 +38,7 @@
 		</div>
 		<h1 id="empty"></h1>
 	</body>
-	<script type="text/javascript" src="../include/debug.js"></script>
-	<script type="text/javascript" src="js/actionPopup.js"></script>
+	<script src="../include/debug.js"></script>
+	<script src="../include/template.js"></script>
+	<script src="js/actionPopup.js"></script>
 </html>

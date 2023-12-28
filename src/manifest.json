@@ -30,9 +30,10 @@
 		"alarms",
 		"contextMenus",
 		"sessions",
+		"management",
 		"storage",
 		"tabs"
 	],
-	"version": "0.1.1.16",
-	"version_name": "0.1.1 beta16"
+	"version": "0.1.1.17",
+	"version_name": "0.1.1 beta17"
 }

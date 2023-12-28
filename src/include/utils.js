@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 const APP = chrome.runtime.getManifest();
 const CLONE = object => Object.assign({}, object);
 const truncate = (string_, n = 50) =>
@@ -11,6 +10,16 @@ const truncate = (string_, n = 50) =>
 const pad = (s, n = 2) => ("" + s).padStart(n, 0);
 
 const Void = () => {};
+
+/**
+ * Performs a bitwise AND operation on 64bit numbers.
+ *
+ * @link https://stackoverflow.com/a/43666199/2930038
+ * @param {number} a - The first number.
+ * @param {number} b - The second number.
+ * @returns {number} - The result of the bitwise AND operation.
+ */
+const BitWiseAnd = (a, b) => (~~(a / 0x80_00_00_00) & ~~(b / 0x80_00_00_00)) * 0x80_00_00_00 + ((a & 0x7F_FF_FF_FF) & (b & 0x7F_FF_FF_FF));
 
 /**
  * Compares two versions.
@@ -36,3 +45,9 @@ const compareVersions = ((prep, l, i, r) => (a, b) =>
 	.replace(/[^\d.]+/g, c => "." + (c.replace(/[\W_]+/, "").toUpperCase().charCodeAt(0) - 65_536) + ".")
 	.replace(/(?:\.0+)*(\.-\d+(?:\.\d+)?)\.*$/g, "$1")
 	.split("."));
+
+const centerString = (string, limit = 75, filler = "-") =>
+{
+	const padLength = ~~((limit - string.length) / 2);
+	return string.padStart(string.length + padLength, filler).padEnd(string.length + padLength * 2, filler);
+};
