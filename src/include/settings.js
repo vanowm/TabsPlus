@@ -86,12 +86,6 @@ const SETTINGS = (() =>
 			noSync: true,
 			default: []
 		},
-		favicons:
-		{
-			internal: true,
-			noSync: true,
-			default: {}
-		},
 		tabsList:
 		{
 			internal: true,
@@ -310,10 +304,7 @@ const SETTINGS = (() =>
 				}
 			}
 			debug.trace("wtf", [...TABS.tabsData]);
-			debug.debug("settings sorting tabs", [...TABS.tabsData.values()].map(a =>
-			{
-				return {url: a.url, id: a.id, tabUUID: a.tabUUID, windowUUID: a.windowUUID, uuidList, a};
-			}));
+			debug.debug("settings sorting tabs", [...TABS.tabsData.values()].map(a => new Object({url: a.url, id: a.id, tabUUID: a.tabUUID, windowUUID: a.windowUUID, uuidList, a})));
 			for(let i = 0, length = savedTabsList.length; i < length; i++)
 			{
 				let tab = savedTabsList[i];
@@ -340,10 +331,7 @@ const SETTINGS = (() =>
 			for(let i = 0; i < activeTabs.length; i++)
 				TABS.add(activeTabs[i], false);
 
-			debug.debug("settings FINISHED	sorting tabs", [...TABS.tabsData.values()].map(a =>
-			{
-				return {url: a.url, id: a.id, tabUUID: a.tabUUID, windowUUID: a.windowUUID, a};
-			}));
+			debug.debug("settings FINISHED	sorting tabs", [...TABS.tabsData.values()].map(a => new Object({url: a.url, id: a.id, tabUUID: a.tabUUID, windowUUID: a.windowUUID, a})));
 			TABS.save();
 			for (const tab of TABS.tabsData)
 				actionButton.setIcon(tab[1]);
@@ -421,7 +409,7 @@ const SETTINGS = (() =>
 		{
 			const o = {};
 			o[name] = value;
-			settingsSave(o, er => debug.debug("settingsSave result", o, er, chrome.runtime.lastError));
+			settingsSave(o, er => debug.debug("settingsSave result", {o, er, lastError: chrome.runtime.lastError}));
 		}
 		return save;
 	},

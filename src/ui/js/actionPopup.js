@@ -103,14 +103,11 @@ const genTemplate = ({elContainer, sessions, windowIndex, indexLength = 0}) =>
 	}
 };
 
-const faviconRegex = new RegExp("^chrome-extension://(?!" + chrome.runtime.id + "/)", "");
-
 const getOption = ({ elContainer, sessions, windowIndex, index, indexLength}) =>
 {
 	const sessionItem = sessions[index];
 	let session = sessionItem.window;
 	let elOption;
-	let favicon = "";
 	let title = "";
 	const sIndex = (windowIndex === undefined ? "" : windowIndex + ".") + ++index;
 	if (indexLength < sIndex.length)
@@ -138,27 +135,13 @@ const getOption = ({ elContainer, sessions, windowIndex, index, indexLength}) =>
 		elOption = elTemplateOption.cloneNode(true);
 		session = sessionItem.tab || sessionItem;
 		const url = session.url;
-		// console.trace(session);
-		favicon = session.favIconUrl || settings.favicons.value[url] || settings.favicons.value[getHostname(url)] || "";
-		if (faviconRegex.test(favicon))
-			favicon = "";
-
-		// favicon = faviconURL(url);
-
+		const favicon = faviconURL(url);
 		title = session.title;
 		const elUrl = elOption.querySelector(".url");
 		elUrl.textContent = url;
-		// elUrl.title = url;
 		elOption.title = title + "\n" + url;
 		const elFavicon = elOption.querySelector(".favicon");
-		if (favicon)
-			elFavicon.style.setProperty("--url", `url(${CSS.escape(favicon)})`);
-		else
-			elFavicon.style.removeProperty("--url");
-		// const image = new Image();
-		// image.addEventListener("error", () => (chrome.runtime.lastError, elFavicon.style.removeProperty("--url")));
-		// image.addEventListener("load", evt => elFavicon.style.setProperty("--url", `url(${CSS.escape(evt.target.src)})`));
-		// image.src = favicon;
+		elFavicon.style.setProperty("--url", `url(${CSS.escape(favicon)})`);
 
 	}
 	// for (const s in session)

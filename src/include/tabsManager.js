@@ -759,10 +759,6 @@ const tabsHandler = {
 			actionButton.setIcon(tab);
 		}
 
-		if (tab.favIconUrl)
-		{
-			FAVICONS.add(tab.url, tab.favIconUrl, true);
-		}
 	//   debug.debug("onUpdated", {tabId, changeInfoStatus: changeInfo.status, tabStatus: tab.status, changeInfo, tab: JSON.parse(JSON.stringify(tab)), tabStored: TABS.find(tabId)});
 	// //debug.debug("onUpdated", tabId, changeInfo, changeInfo.status === "loading", clone(tab));
 	//   TABS.updateData(Object.assign(changeInfo, {id: tabId, windowId: tab.windowId}));

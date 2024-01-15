@@ -7,7 +7,6 @@ importScripts(
 	"include/tabsManager.js",
 	"include/actionButton.js",
 	"include/contextMenu.js",
-	"include/favicons.js",
 	"include/alarm.js",
 );
 
@@ -15,8 +14,6 @@ const TABS = new TabsManager();
 
 //wait for the settings initialization
 const onWrapper = callback => (...args) => SETTINGS.$inited.then(() => callback.apply(callback, args));
-
-FAVICONS.update();
 
 // messaging
 chrome.runtime.onMessage.addListener(MESSENGER.handler.onMessage);
@@ -51,7 +48,5 @@ chrome.sessions.onChanged.addListener((...args) =>
 {
 	debug.debug("session.onChanged", args);
 
-	//update favicons cache
-	FAVICONS.update(true);
 	CONTEXTMENU.create();
 });

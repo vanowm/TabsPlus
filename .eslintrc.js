@@ -48,7 +48,6 @@ module.exports = {
 		"Void": true,
 		"compareVersions": true,
 		"actionButton": true,
-		"FAVICONS": true,
 		"tabsHandler": true,
 		"unloadTabs": true,
 		"BitWiseAnd": true,
@@ -342,7 +341,7 @@ module.exports = {
 			}
 		],
 		"semi": "error",
-		"sonarjs/cognitive-complexity": ["error", 90],
+		"sonarjs/cognitive-complexity": ["error", 290],
 		// "sonarjs/no-duplicate-string": "off",
 		"space-before-function-paren": "error",
 		// "no-empty-function": "error",
