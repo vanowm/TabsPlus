@@ -29,10 +29,11 @@
 	"permissions": [
 		"alarms",
 		"contextMenus",
+		"favicon",
 		"sessions",
 		"storage",
 		"tabs"
 	],
-	"version": "0.1.1.17",
-	"version_name": "0.1.1 beta17"
+	"version": "0.1.1.18",
+	"version_name": "0.1.1 beta18"
 }

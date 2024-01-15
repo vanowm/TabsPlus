@@ -227,6 +227,30 @@
 	"showDate_desc": {
 		"message": "Show date when tab/window was closed"
 	},
+	"showIcon":	{
+		"message": "Show icon"
+	},
+	"showIcon_0": {
+		"message": "No"
+	},
+	"showIcon_1": {
+		"message": "Yes"
+	},
+	"showIcon_desc": {
+		"message": "Show icon of a closed tab"
+	},
+	"showTitle":	{
+		"message": "Show title"
+	},
+	"showTitle_0": {
+		"message": "No"
+	},
+	"showTitle_1": {
+		"message": "Yes"
+	},
+	"showTitle_desc": {
+		"message": "Show title of a closed tab"
+	},
 	"showUrl":	{
 		"message": "Show URL"
 	},

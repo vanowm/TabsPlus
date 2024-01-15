@@ -6,14 +6,14 @@ const settings = {};
 let inited = false;
 let contextMenuOption = null;
 let elMenu = null;
-let elCopy = null;
+let elCopyUrl = null;
 let elTemplateOption = null;
 let elTemplateMenu = null;
 let elCopyTitle = null;
 let windowTitleLength = 0;
-const app = chrome.runtime.getManifest();
+const openWindows = {};
 
-template({app});
+template({app:APP});
 
 chrome.sessions.onChanged.addListener(() => setTimeout(init, 100));
 
@@ -39,6 +39,9 @@ const messenger = reconnected =>
 			}
 			case "settingChanged":
 			{
+				if (!settings[message.name] || settings[message.name].internal)
+					break;
+
 				settings[message.name].value = message.newValue;
 				init(message.name);
 				break;
@@ -53,15 +56,6 @@ const messenger = reconnected =>
 
 messenger();
 
-const sTab = chrome.i18n.getMessage("tab");
-const sTabs = chrome.i18n.getMessage("tabs");
-const sWindow = chrome.i18n.getMessage("window");
-const sSecond = chrome.i18n.getMessage("second");
-const sMinute = chrome.i18n.getMessage("minute");
-const sHour = chrome.i18n.getMessage("hour");
-const sDay = chrome.i18n.getMessage("day");
-const sMonth = chrome.i18n.getMessage("month");
-const sYear = chrome.i18n.getMessage("year");
 const aDates = [];
 
 const relativeDate = date =>
@@ -78,46 +72,44 @@ const relativeDate = date =>
 	const year = month * 12;
 	if (diff < minute)
 	{
-		return diff + sSecond;
+		return diff + i18n.second;
 	}
 	else if (diff < hour)
 	{
-		return Math.floor(diff / minute) + sMinute;
+		return Math.floor(diff / minute) + i18n.minute;
 	}
 	else if (diff < day)
 	{
-		return Math.floor(diff / hour) + sHour;
+		return Math.floor(diff / hour) + i18n.hour;
 	}
 	else if (diff < month)
 	{
-		return Math.floor(diff / day) + sDay;
+		return Math.floor(diff / day) + i18n.day;
 	}
 	else if (diff < year)
 	{
-		return Math.floor(diff / month) + sMonth;
+		return Math.floor(diff / month) + i18n.month;
 	}
-	return Math.floor(diff / year) + sYear;
+	return Math.floor(diff / year) + i18n.year;
 };
 
 const genTemplate = ({elContainer, sessions, windowIndex, indexLength = 0}) =>
 {
-	if (sessions.length === 0)
-	{
-		document.body.classList.add("empty");
-		document.getElementById("empty").textContent = chrome.i18n.getMessage("noHistory");
-		window.addEventListener("click", window.close);
-	}
+	const isEmpty = sessions.length === 0;
+	document.body.classList.toggle("empty", isEmpty);
 	for (let index = 0; index < sessions.length; index++)
 	{
 		getOption({ elContainer, sessions, windowIndex, index, indexLength});
 	}
 };
 
+const faviconRegex = new RegExp("^chrome-extension://(?!" + chrome.runtime.id + "/)", "");
+
 const getOption = ({ elContainer, sessions, windowIndex, index, indexLength}) =>
 {
 	const sessionItem = sessions[index];
 	let session = sessionItem.window;
-	let option;
+	let elOption;
 	let favicon = "";
 	let title = "";
 	const sIndex = (windowIndex === undefined ? "" : windowIndex + ".") + ++index;
@@ -127,42 +119,58 @@ const getOption = ({ elContainer, sessions, windowIndex, index, indexLength}) =>
 	const sDate = relativeDate(sessionItem.lastModified * 1000);
 	if (session)
 	{
-		option = elTemplateMenu.cloneNode(true);
-		genTemplate({elContainer: option.querySelector(".container"), sessions: session.tabs.map(tab =>
+		elOption = elTemplateMenu.cloneNode(true);
+		genTemplate({elContainer: elOption.querySelector(".container"), sessions: session.tabs.map(tab =>
 		{
 			return {lastModified: sessionItem.lastModified, tab};
 		}), windowIndex: index, indexLength: 0});
-		title = `${sWindow} (${session.tabs.length} ${session.tabs.length > 1 ? sTabs : sTab})`;
+		title = `${i18n.window} (${session.tabs.length} ${session.tabs.length > 1 ? i18n.tabs : i18n.tab})`;
 		if (windowTitleLength < title.length)
 			windowTitleLength = title.length;
 
 		if (settings.expandWindow.value)
-			option.classList.add("open");
+			elOption.classList.add("open");
 
+		elOption.classList.toggle("open", !!openWindows[session.sessionId]);
 	}
 	else
 	{
-		option = elTemplateOption.cloneNode(true);
+		elOption = elTemplateOption.cloneNode(true);
 		session = sessionItem.tab || sessionItem;
 		const url = session.url;
-		favicon = session.favIconUrl || settings.favicons.value[url] || settings.favicons.value[new URL(url).hostname] || "";
+		// console.trace(session);
+		favicon = session.favIconUrl || settings.favicons.value[url] || settings.favicons.value[getHostname(url)] || "";
+		if (faviconRegex.test(favicon))
+			favicon = "";
+
+		// favicon = faviconURL(url);
+
 		title = session.title;
-		const elUrl = option.querySelector(".url");
+		const elUrl = elOption.querySelector(".url");
 		elUrl.textContent = url;
 		// elUrl.title = url;
-		option.title = title + "\n" + url;
-		option.querySelector(".favicon").src = favicon;
+		elOption.title = title + "\n" + url;
+		const elFavicon = elOption.querySelector(".favicon");
+		if (favicon)
+			elFavicon.style.setProperty("--url", `url(${CSS.escape(favicon)})`);
+		else
+			elFavicon.style.removeProperty("--url");
+		// const image = new Image();
+		// image.addEventListener("error", () => (chrome.runtime.lastError, elFavicon.style.removeProperty("--url")));
+		// image.addEventListener("load", evt => elFavicon.style.setProperty("--url", `url(${CSS.escape(evt.target.src)})`));
+		// image.src = favicon;
+
 	}
 	// for (const s in session)
 	// 	option.dataset[s] = Array.isArray(session[s]) ? session[s].length : session[s];
 
-	const elIndex = option.querySelector(".index");
+	const elIndex = elOption.querySelector(".index");
 	elIndex.textContent = sIndex;
 
-	const elTitle = option.querySelector(".title");
+	const elTitle = elOption.querySelector(".title");
 	elTitle.textContent = title;
 
-	const elDate = option.querySelector(":scope > .date");
+	const elDate = elOption.querySelector(":scope > .date");
 	let sDateTitle = "";
 	if (sessionItem.lastModified)
 	{
@@ -178,25 +186,53 @@ const getOption = ({ elContainer, sessions, windowIndex, index, indexLength}) =>
 			aDates.push(elDate);
 	}
 
-	option.addEventListener("click", onClick({ option, session }));
-	elContainer.append(option);
-	elContainer.style.setProperty("--index-length" + (windowIndex ? "-tabs" : ""), indexLength + (windowIndex ? 0 : 1) + "ch");
-	return option;
+	elOption.addEventListener("click", onClick(elOption));
+	elOption.dataset.id = session.sessionId;
+	elContainer.append(elOption);
+	if (windowIndex)
+		elContainer.style.setProperty("--index-length-tabs", indexLength + "ch");
+	else
+		elContainer.style.setProperty("--index-length", indexLength + 1 + "ch");
+
+	return elOption;
 };
 
-const onClick = ({ option, session }) => evt =>
+const onClick = elOption => evt =>
 {
 	if (contextMenuOption)
 		return;
 
 	contextMenuClose(evt);
 	evt.stopPropagation();
+	const id = elOption.dataset.id;
 	if (evt.target.classList.contains("sub"))
-		return option.classList.toggle("open");
+	{
+		const isOpen = !elOption.classList.contains("open");
+		openWindows[id] = isOpen;
+		if (evt.ctrlKey)
+		{
+			const nlMenus = elOption.parentNode.querySelectorAll(".menu");
+			for(let i = 0; i < nlMenus.length; i++)
+			{
+				openWindows[nlMenus[i].dataset.id] = isOpen;
+				nlMenus[i].classList.toggle("open", isOpen);
+			}
 
-	debug.debug("restore", session.sessionId);
-	chrome.sessions.restore(session.sessionId);
+		}
+		return elOption.classList.toggle("open", isOpen);
+	}
+
+	debug.debug("restore", id);
+	chrome.sessions.restore(id);
 	window.close();
+};
+
+const faviconURL = u =>
+{
+	const url = new URL(chrome.runtime.getURL("/_favicon/"));
+	url.searchParams.set("pageUrl", u);
+	url.searchParams.set("size", "32");
+	return url.toString();
 };
 
 const contextMenuClose = evt =>
@@ -208,30 +244,26 @@ const contextMenuClose = evt =>
 		return;
 
 	debug.debug(evt, contextMenuOption);
-
-	debug.debug(evt && evt.target);
-	debug.debug(elCopy);
 	if (evt)
 	{
-		let close = false;
-		if (evt.target === elCopy)
+		let text;
+		switch(evt.target)
 		{
-			const url = contextMenuOption.querySelector(".url").textContent;
-			debug.debug(url);
-			navigator.clipboard.writeText(url);
-			close = true;
-			// return;
+			case elCopyUrl:
+			{
+				text = contextMenuOption.querySelector(".url").textContent;
+				break;
+			}
+			case elCopyTitle:
+			{
+				text = contextMenuOption.querySelector(".title").textContent;
+				break;
+			}
 		}
-		else if (evt.target === elCopyTitle)
+		if (text !== undefined)
 		{
-			const title = contextMenuOption.querySelector(".title").textContent;
-			debug.debug(title);
-			navigator.clipboard.writeText(title);
-			close = true;
-			// return;
-		}
-		if (close)
-		{
+			navigator.clipboard.writeText(text);
+			debug.trace(text);
 			evt.preventDefault();
 		}
 
@@ -241,7 +273,7 @@ const contextMenuClose = evt =>
 	contextMenuOption = null;
 };
 
-// document.title = chrome.i18n.getMessage("contextMenu_closedTabs");
+// document.title = _.contextMenu_closedTabs;
 let lastTimestamp;
 
 const dateLoop = timestamp =>
@@ -264,7 +296,10 @@ const dateLoop = timestamp =>
 
 const init = setting =>
 {
+	debug.trace("actionPopup init", setting);
 	document.body.classList.toggle("no-date", !settings.showDate.value);
+	document.body.classList.toggle("no-icon", !settings.showIcon.value);
+	document.body.classList.toggle("no-title", !settings.showTitle.value);
 	document.body.classList.toggle("no-url", !settings.showUrl.value);
 	lastTimestamp = 0;
 	if (setting)
@@ -273,12 +308,16 @@ const init = setting =>
 		{
 			const nlMenus = document.querySelectorAll(".menu");
 			for (let i = 0; i < nlMenus.length; i++)
-				nlMenus[i].classList.toggle("open", settings.expandWindow.value);
+			{
+				if (!(nlMenus[i].dataset.id in openWindows))
+					nlMenus[i].classList.toggle("open", settings.expandWindow.value);
+			}
 		}
 		return;
 	}
+	contextMenuClose();
 	elMenu = document.getElementById("list");
-	elCopy = document.getElementById("copy");
+	elCopyUrl = document.getElementById("copyUrl");
 	elCopyTitle = document.getElementById("copyTitle");
 
 	elMenu.innerHTML = "";
@@ -333,8 +372,8 @@ const init = setting =>
 	if (inited)
 		return;
 
-	elCopy.textContent = chrome.i18n.getMessage("contextMenu_copy");
-	elCopyTitle.textContent = chrome.i18n.getMessage("contextMenu_copyTitle");
+	elCopyUrl.textContent = i18n.contextMenu_copy;
+	elCopyTitle.textContent = i18n.contextMenu_copyTitle;
 
 	document.documentElement.addEventListener("contextmenu", evt =>
 	{
@@ -377,5 +416,7 @@ const init = setting =>
 window.addEventListener("DOMContentLoaded", () =>
 {
 	document.documentElement.classList.remove("loading");
+	const elEmpty = document.getElementById("empty");
+	elEmpty.addEventListener("click", window.close.bind(window));
 }, { once: true });
 })();

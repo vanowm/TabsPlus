@@ -16,16 +16,17 @@ const TABS = new TabsManager();
 //wait for the settings initialization
 const onWrapper = callback => (...args) => SETTINGS.$inited.then(() => callback.apply(callback, args));
 
-Favicons.update();
+FAVICONS.update();
 
 // messaging
-chrome.runtime.onMessage.addListener(messagesHandler.onMessage);
+chrome.runtime.onMessage.addListener(MESSENGER.handler.onMessage);
 
 //broadcast message to reconnect to the service worker
 chrome.runtime.sendMessage(null, "reconnect")?.catch(error => debug.debug("sendMessage reconnect %c" + error, "color: red;"));
 
-for(const i in messagesHandler)
-	messenger[i]?.(messagesHandler[i]);
+//init message listeners
+for(const i in MESSENGER.handler)
+	MESSENGER[i]?.(MESSENGER.handler[i]);
 
 for(const i in tabsHandler)
 	chrome.tabs[i]?.addListener(onWrapper(tabsHandler[i]));
@@ -39,9 +40,10 @@ chrome.runtime.onSuspend.addListener(() =>
 
 chrome.contextMenus.onClicked.addListener(onWrapper((info, tab) =>
 {
-	const command = contextMenu.onClick[info.menuItemId];
-	if (command instanceof Function)
-		command(info, tab);
+	CONTEXTMENU.onClick[info.menuItemId]?.(info, tab);
+	// const command = CONTEXTMENU.onClick[info.menuItemId];
+	// if (command instanceof Function)
+	// 	command(info, tab);
 }));
 
 chrome.action.onClicked.addListener(onWrapper(actionButton));
@@ -50,6 +52,6 @@ chrome.sessions.onChanged.addListener((...args) =>
 	debug.debug("session.onChanged", args);
 
 	//update favicons cache
-	Favicons.update(true);
-	contextMenu.createContextMenu();
+	FAVICONS.update(true);
+	CONTEXTMENU.create();
 });

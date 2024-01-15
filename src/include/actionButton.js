@@ -28,7 +28,7 @@ const actionButton = (tab, iconAction) =>
 			found.skip = !found.skip;
 			TABS.save();
 			actionButton.setIcon(found);
-			// setContext(found);
+			CONTEXTMENU.setContext(found);
 			break;
 		}
 
@@ -104,7 +104,7 @@ actionButton.setIcon = tab =>
 
 	let title = APP.name;
 	let popup = "";
-	const open = ~~messagesHandler._tabs.has(tab.id);
+	const open = ~~MESSENGER.tabs.has(tab.id);
 	const action = SETTINGS.iconAction ? "enable" : "disable";
 	const skipped = TABS.find(tab) || tab;
 	const property = ACTIONPROPS[SETTINGS.iconAction];
@@ -118,20 +118,20 @@ actionButton.setIcon = tab =>
 	}
 	else if (SETTINGS.iconAction)
 	{
-		badge = badge + "" + chrome.i18n.getMessage("iconAction_" + SETTINGS.iconAction + "_badge").padStart(2, " ");
+		badge = badge + "" + i18n("iconAction_" + SETTINGS.iconAction + "_badge").padStart(2, " ");
 	}
 
-	debug.trace("setIcon", {id: tab.id, badge, iconAction: SETTINGS.iconAction, prop: property, open, tab, skipped, tabConnect: messagesHandler._tabs});
+	debug.trace("setIcon", {id: tab.id, badge, iconAction: SETTINGS.iconAction, prop: property, open, tab, skipped, tabConnect: MESSENGER.tabs});
 	if (badge.length < 3)
 		badge = "  " + badge + "  ";
 
 	if (SETTINGS.iconAction === ACTION_SKIP)
 	{
-		title += "\n" + chrome.i18n.getMessage("iconAction_" + ACTION_SKIP + "_" + (skipped.skip ? "N" : "Y"));
+		title += "\n" + i18n("iconAction_" + ACTION_SKIP + "_" + (skipped.skip ? "N" : "Y"));
 	}
 	else if (SETTINGS.iconAction)
 	{
-		title += "\n" + chrome.i18n.getMessage("iconAction_" + SETTINGS.iconAction);
+		title += "\n" + i18n("iconAction_" + SETTINGS.iconAction);
 	}
 	chrome.action[action](tab.id).catch(Void);
 	if (color)

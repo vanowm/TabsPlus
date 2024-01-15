@@ -1,17 +1,14 @@
 debug.debug("options", performance.now());
 
 const $ = id => document.getElementById(id);
-const app = chrome.runtime.getManifest();
-const Void = () => {};
+if (!APP.version_name)
+	APP.version_name = APP.version;
 
-if (!app.version_name)
-	app.version_name = app.version;
-
-template({app});
+template({app: APP});
 
 const init = ({ data: settings }) =>
 {
-	debug.debug("options init", performance.now());
+	debug.debug("options init", performance.now(), settings);
 	const elOptionsTable = document.querySelector("#options > .table");
 	const elTemplate = elOptionsTable.firstElementChild;
 	elOptionsTable.firstElementChild.remove();
@@ -40,7 +37,7 @@ const init = ({ data: settings }) =>
 	{
 		const d = new Date();
 		const options = {
-			suggestedName: `${app.name}_${_("settings")}_v${app.version}_`
+			suggestedName: `${APP.name}_${i18n.settings}_v${APP.version}_`
 				+ d.getFullYear()
 				+ pad(d.getMonth() + 1)
 				+ pad(d.getDate()) + "_"
@@ -50,7 +47,7 @@ const init = ({ data: settings }) =>
 				+ ".json",
 			types: [
 				{
-					description: app.name + _("settings"),
+					description: APP.name + i18n.settings,
 					accept: {
 						"*/*": [".json"],
 					},
@@ -76,11 +73,11 @@ const init = ({ data: settings }) =>
 		for (const i in data)
 		{
 			const er = (!settings[i] && 1)
-				+ (settings[i] && (typeof (settings.$default[i])) !== typeof (data[i]) ? 2 : 0)
-				+ (settings[i] && settings.$options[i] && !settings.$options[i][data[i]] ? 4 : 0);
+				+ (settings[i] && (typeof (settings[i].default)) !== typeof (data[i]) ? 2 : 0)
+				+ (settings[i] && settings[i].options && !settings[i].options[data[i]] ? 4 : 0);
 			//                 + (settings[i] && !settings[i].options ? 4 : 0)
 			//                 + (i == "version" ? 4 : 0);
-			if (er || i === "version" || settings.$internal[i])
+			if (er || i === "version" || settings[i].internal)
 			{
 				// eslint-disable-next-line unicorn/no-array-reduce
 				debug.debug("skipped", i, "value", data[i], "error code", er, er ? "(" + ["option doesn't exit", "wrong value type", "value out of range"].reduce((a, b, i) => (((er >> i) & 1) ? (a += (a ? ", " : "") + b) : a), "") + ")" : "");
@@ -117,6 +114,20 @@ const init = ({ data: settings }) =>
 		const option = evt.target;
 		const value = ~~(option.type === "checkbox" ? option.checked : option.value);
 		option.classList.toggle("default", value === settings[option.id].default);
+		const next = settings[option.id].next;
+		if (next && !value)
+		{
+			let count = next.length;
+			for(let i = 0; i < next.length; i++)
+			{
+				if (!settings[next[i]].value)
+					count--;
+			}
+			if (!count)
+			{
+				$(next[0]).click();
+			}
+		}
 		settings[option.id].value = value;
 		let o = {};
 		o[option.id] = value;
@@ -150,19 +161,32 @@ const init = ({ data: settings }) =>
 
 	const enableDisable = () =>
 	{
-		const ids = {
+		const disable = {
 			expandWindow:	settings.iconAction.value !== ACTION_LIST,
 			showDate:		settings.iconAction.value !== ACTION_LIST,
+			showIcon:		settings.iconAction.value !== ACTION_LIST,
+			showTitle:		settings.iconAction.value !== ACTION_LIST,
 			showUrl:		settings.iconAction.value !== ACTION_LIST,
 			tabsScrollFix:	settings.newTabActivate.value !== 1,
 			newTabPageOnly:	settings.newTabActivate.value !== 1,
 			newTabPageSkip:	!settings.newTabActivate.value || settings.afterClose.value !== 1
 		};
-		for(const id in ids)
+		for(const id in disable)
 		{
-			settings[id].input.disabled = ids[id];
-			settings[id].input.closest(".row").classList.toggle("disabled", ids[id]);
+			settings[id].input.disabled = disable[id];
+			settings[id].input.closest(".row").classList.toggle("disabled", disable[id]);
 		}
+		// const hide = {
+		// 	expandWindow:	settings.iconAction.value !== ACTION_LIST,
+		// 	showDate:		settings.iconAction.value !== ACTION_LIST,
+		// 	showIcon:		settings.iconAction.value !== ACTION_LIST,
+		// 	showTitle:		settings.iconAction.value !== ACTION_LIST,
+		// 	showUrl:		settings.iconAction.value !== ACTION_LIST,
+		// };
+		// for(const id in hide)
+		// {
+		// 	settings[id].input.closest(".row").classList.toggle("hidden", hide[id]);
+		// }
 	};
 
 	const setOption = (id, value, save) =>
@@ -482,7 +506,7 @@ const init = ({ data: settings }) =>
 
 	elBackupRestore.addEventListener("input", evt =>
 	{
-		debug.debug(evt);
+		debug.trace(evt);
 		let data = {};
 		let error = false;
 		const value = elBackupRestore.value.trim();
@@ -527,7 +551,7 @@ const init = ({ data: settings }) =>
 	{
 		const options = {
 			types: [{
-				description: app.name + " " + _("settings"),
+				description: APP.name + " " + i18n.settings,
 				accept: {
 					"text/json": [".json"]
 				},

@@ -46,10 +46,23 @@ const SETTINGS = (() =>
 			default: 0,
 			group: "iconAction"
 		},
+		showIcon:
+		{
+			default: 1,
+			group: "iconAction",
+			next: ["showTitle", "showUrl"], //list of other checkboxes. First item will be forced checked if all are unchecked
+		},
+		showTitle:
+		{
+			default: 1,
+			group: "iconAction",
+			next: ["showUrl", "showIcon"],
+		},
 		showUrl:
 		{
 			default: 1,
-			group: "iconAction"
+			group: "iconAction",
+			next: ["showTitle", "showIcon"],
 		},
 		showDate:
 		{
@@ -60,7 +73,7 @@ const SETTINGS = (() =>
 		contextMenu:
 		{
 			default: 0,
-			onChange: "createContextMenu",
+			onChange: "create",
 		},
 
 		// syncSettings:
@@ -100,7 +113,7 @@ const SETTINGS = (() =>
 
 	const settingsSave = (o, callback) =>
 	{
-		debug.trace("settingsSave", STORAGE === chrome.storage.local, o, (new Error("settingsSave")).stack);
+		debug.trace("settingsSave", STORAGE === chrome.storage.local, o, trace());
 		if (STORAGE === chrome.storage.local)
 			return STORAGE.set(o, callback);
 
@@ -115,10 +128,10 @@ const SETTINGS = (() =>
 		}
 		debug.debug("local", local);
 		debug.debug("sync", sync);
-		if (Object.keys(local).length > 0)
+		if (!isEmpty(local))
 			chrome.storage.local.set(local, callback);
 
-		if (Object.keys(sync).length > 0)
+		if (!isEmpty(sync))
 			chrome.storage.sync.set(sync, callback);
 	};
 
@@ -134,10 +147,10 @@ const SETTINGS = (() =>
 			if (!settings[o])
 				continue;
 
-			if (contextMenu[settings[o].onChange] instanceof Function)
-				contextMenu[settings[o].onChange](o, changes[o].newValue, changes[o].oldValue);
+			if (CONTEXTMENU[settings[o].onChange] instanceof Function)
+				CONTEXTMENU[settings[o].onChange](o, changes[o].newValue, changes[o].oldValue);
 
-			messenger({
+			MESSENGER({
 				type: "settingChanged",
 				name: o,
 				newValue: changes[o].newValue,
@@ -146,206 +159,205 @@ const SETTINGS = (() =>
 		}
 	};
 
+	const settingsInit = (options, type, resolve) =>
+	{
+		const save = {};
+		for (const i in settings)
+		{
+
+			const label = i18n(i);
+			const description = i18n(i + "_desc");
+			const valid = settings[i].valid || [];
+
+			if (label)
+				settings[i].label = label;
+
+			if (description)
+				settings[i].description = description;
+
+			if (valid.length === 0)
+			{
+				let n = 0;
+				let validValue;
+				do
+				{
+					validValue = i18n(i + "_" + n);
+					if (validValue)
+						valid[valid.length] = validValue;
+
+					n++;
+				}
+				while(validValue);
+			}
+			const map = settings[i].map;
+			for(let j = 0; j < valid.length; j++)
+			{
+				const name = i18n(i + "_" + j);
+				if (!name)
+					continue;
+
+				if (!settings[i].options)
+					settings[i].options = [];
+
+				const index = map ? map.indexOf(j) : j;
+				settings[i].options[index] = {id: j, name, description: i18n(i + "_" + j + "_desc")};
+			}
+		}
+		const remove = [];
+		for (const id in options)
+		{
+			if (settings[id] && typeof settings[id].default === typeof options[id])
+				settings[id].value = options[id];
+			else
+				remove.push(id);
+		}
+		if (remove.length > 0)
+			STORAGE.remove(remove);
+
+		const local = [];
+		for (const id in settings)
+		{
+			if (settings[id].noSync && type === "sync")
+			{
+				//      delete _default[i];
+				local[local.length] = id;
+				continue;
+			}
+			if (settings[id].value === undefined)
+			{
+				save[id] = settings[id].default;
+				settings[id].value = save[id];
+			}
+
+		}
+		// debug.debug(JSON.stringify(_default, null, 2), type);
+		//alert("startup settings with sync off are overwritten by sync.");
+
+		if (type === undefined && settings.syncSettings?.value && STORAGE !== chrome.storage.sync)
+		{
+			STORAGE = chrome.storage.sync;
+			chrome.storage.local.set({syncSettings: 1}, result => result && debug.debug(result));
+			return STORAGE.get(null, data => settingsInit(data, "sync", resolve));
+		}
+		else if (type === undefined && !settings.syncSettings?.value && STORAGE !== chrome.storage.local)
+		{
+			chrome.storage.local.set({syncSettings: 0}, result => result && debug.debug(result));
+			STORAGE = chrome.storage.local;
+			return STORAGE.get(null, data => settingsInit(data, "local", resolve));
+		}
+		debug.debug("settings", {type, local, options});
+
+		if (local.length > 0)
+		{
+			chrome.storage.local.get(local, data => settingsInit(data, "local", resolve));
+			return;
+		}
+		if (APP.version !== settings.version.value)
+		{
+			// eslint-disable-next-line sonarjs/no-collapsible-if
+			if (compareVersions(settings.version.value, "0.1.1.16") < 0)
+			{
+				// eslint-disable-next-line unicorn/no-lonely-if
+				if (settings.tabsScrollFix.value === 1)
+					settings.tabsScrollFix.value = 5; //300ms
+			}
+			settings.version.value = APP.version;
+			save.version = APP.version;
+		}
+
+		// debug.debug(JSON.stringify(_default, null, 2),save, type);
+		if (Object.keys(save).length > 0)
+			settingsSave(save, er => debug.debug("init settings", save, er));
+
+		// context menu
+		CONTEXTMENU.create();
+		const _allTabs = chrome.tabs.query({});
+		const _activeTabs = chrome.tabs.query({active: true});
+		const _currentTab = chrome.tabs.query({active: true, currentWindow: true});
+		TABS.loaded.then(async data =>
+		{
+			const savedTabsList = data.tabsList || [];
+			const allTabs = await _allTabs;
+			debug.trace(data);
+			debug.debug("TABS.loaded", data.tabsList?.map(a => CLONE(a)), CLONE(data.tabsOrder), data, allTabs);
+			const uuidList = new Map();
+			for(let i = 0; i < allTabs.length; i++)
+			{
+				let tab = TABS.add(allTabs[i], false);
+				const uuidTab = uuidList.get(tab.tabUUID) || [];
+				uuidTab.push(tab);
+				uuidList.set(tab.tabUUID, uuidTab);
+				tab = TABS.find(allTabs[i]);
+				if (tab)
+					TABS.setWinUUID(tab);
+			}
+			for(let i = 0, length = savedTabsList.length; i < length; i++)
+			{
+				const tab = savedTabsList[i];
+				const uuidTabs = uuidList.get(tab.tabUUID);
+				if (!uuidTabs)
+					continue;
+
+				for(let index = 0; index < uuidTabs.length; index++)
+				{
+					const uuidTab = uuidTabs[index];
+					if (uuidTab.windowUUID === tab.windowUUID)
+					{
+						tab.id = uuidTab.id;
+						tab.windowId = uuidTab.windowId;
+					}
+
+				}
+			}
+			debug.trace("wtf", [...TABS.tabsData]);
+			debug.debug("settings sorting tabs", [...TABS.tabsData.values()].map(a =>
+			{
+				return {url: a.url, id: a.id, tabUUID: a.tabUUID, windowUUID: a.windowUUID, uuidList, a};
+			}));
+			for(let i = 0, length = savedTabsList.length; i < length; i++)
+			{
+				let tab = savedTabsList[i];
+				const savedTabData = uuidList.get(tab.tabUUID);
+				if (savedTabData)
+				{
+
+					// const tabOld = CLONE(tab);
+					const tabSaved = CLONE(savedTabData);
+					tab = TABS.updateData(savedTabData, tab, true);
+					// TABS.setUUID(tab);
+					// TABS.setWinUUID(tab);
+					TABS.add(tab, false);
+					if (tab.id !== tabSaved.id)
+						TABS.remove(tabSaved, false);
+
+					// debug.log(tabOld.tabUUID, tabOld.id, tab.id, {tabOld, tab: CLONE(tab), tabSaved});
+				}
+
+				// const opened = messengerHandler.onConnect.tab && messengerHandler.onConnect.tab.id === tab.id;
+				// setIcon(tab, opened);
+			}
+			const activeTabs = await _activeTabs;
+			for(let i = 0; i < activeTabs.length; i++)
+				TABS.add(activeTabs[i], false);
+
+			debug.debug("settings FINISHED	sorting tabs", [...TABS.tabsData.values()].map(a =>
+			{
+				return {url: a.url, id: a.id, tabUUID: a.tabUUID, windowUUID: a.windowUUID, a};
+			}));
+			TABS.save();
+			for (const tab of TABS.tabsData)
+				actionButton.setIcon(tab[1]);
+
+			resolve(settings);
+			const [tab] = await _currentTab;
+			return CONTEXTMENU.setContext(tab);
+		}).catch(error => debug.error("settingsInit", error));
+	}; //settingsInit();
+
 	const settingsInited = new Promise(resolve =>
 	{
 		//options
-
-		const settingsInit = (options, type) =>
-		{
-			const save = {};
-			for (const i in settings)
-			{
-
-				const label = chrome.i18n.getMessage(i);
-				const description = chrome.i18n.getMessage(i + "_desc");
-				const valid = settings[i].valid || [];
-
-				if (label)
-					settings[i].label = label;
-
-				if (description)
-					settings[i].description = description;
-
-				if (valid.length === 0)
-				{
-					let n = 0;
-					let validValue;
-					do
-					{
-						validValue = chrome.i18n.getMessage(i + "_" + n);
-						if (validValue)
-							valid[valid.length] = validValue;
-
-						n++;
-					}
-					while(validValue);
-				}
-				const map = settings[i].map;
-				for(let j = 0; j < valid.length; j++)
-				{
-					const name = chrome.i18n.getMessage(i + "_" + j);
-					if (!name)
-						continue;
-
-					if (!settings[i].options)
-						settings[i].options = [];
-
-					const index = map ? map.indexOf(j) : j;
-					settings[i].options[index] = {id: j, name, description: chrome.i18n.getMessage(i + "_" + j + "_desc")};
-				}
-			}
-			const remove = [];
-			for (const id in options)
-			{
-				if (settings[id] && typeof settings[id].default === typeof options[id])
-					settings[id].value = options[id];
-				else
-					remove.push(id);
-			}
-			if (remove.length > 0)
-				STORAGE.remove(remove);
-
-			const local = [];
-			for (const id in settings)
-			{
-				if (settings[id].noSync && type === "sync")
-				{
-					//      delete _default[i];
-					local[local.length] = id;
-					continue;
-				}
-				if (settings[id].value === undefined)
-				{
-					save[id] = settings[id].default;
-					settings[id].value = save[id];
-				}
-
-			}
-			// debug.debug(JSON.stringify(_default, null, 2), type);
-			//alert("startup settings with sync off are overwritten by sync.");
-
-			if (type === undefined && settings.syncSettings?.value && STORAGE !== chrome.storage.sync)
-			{
-				STORAGE = chrome.storage.sync;
-				chrome.storage.local.set({syncSettings: 1}, result => result && debug.debug(result));
-				return STORAGE.get(null, data => settingsInit(data, "sync"));
-			}
-			else if (type === undefined && !settings.syncSettings?.value && STORAGE !== chrome.storage.local)
-			{
-				chrome.storage.local.set({syncSettings: 0}, result => result && debug.debug(result));
-				STORAGE = chrome.storage.local;
-				return STORAGE.get(null, data => settingsInit(data, "local"));
-			}
-			debug.debug("settings", {type, local, options});
-
-			if (local.length > 0)
-			{
-				chrome.storage.local.get(local, data => settingsInit(data, "local"));
-				return;
-			}
-			if (APP.version !== settings.version.value)
-			{
-				// eslint-disable-next-line sonarjs/no-collapsible-if
-				if (compareVersions(settings.version.value, "0.1.1.16") < 0)
-				{
-					// eslint-disable-next-line unicorn/no-lonely-if
-					if (settings.tabsScrollFix.value === 1)
-						settings.tabsScrollFix.value = 5; //300ms
-				}
-				settings.version.value = APP.version;
-				save.version = APP.version;
-			}
-
-			// debug.debug(JSON.stringify(_default, null, 2),save, type);
-			if (Object.keys(save).length > 0)
-				settingsSave(save, er => debug.debug("init settings", save, er));
-
-			// context menu
-			contextMenu.createContextMenu();
-			const _allTabs = chrome.tabs.query({});
-			const _activeTabs = chrome.tabs.query({active: true});
-			const _currentTab = chrome.tabs.query({active: true, currentWindow: true});
-			TABS.loaded.then(async data =>
-			{
-				const savedTabsList = data.tabsList || [];
-				const allTabs = await _allTabs;
-				debug.trace(data);
-				debug.debug("TABS.loaded", data.tabsList?.map(a => CLONE(a)), CLONE(data.tabsOrder), data, allTabs);
-				const uuidList = new Map();
-				for(let i = 0; i < allTabs.length; i++)
-				{
-					let tab = TABS.add(allTabs[i], false);
-					const uuidTab = uuidList.get(tab.tabUUID) || [];
-					uuidTab.push(tab);
-					uuidList.set(tab.tabUUID, uuidTab);
-					tab = TABS.find(allTabs[i]);
-					if (tab)
-						TABS.setWinUUID(tab);
-				}
-				for(let i = 0, length = savedTabsList.length; i < length; i++)
-				{
-					const tab = savedTabsList[i];
-					const uuidTabs = uuidList.get(tab.tabUUID);
-					if (!uuidTabs)
-						continue;
-
-					for(let index = 0; index < uuidTabs.length; index++)
-					{
-						const uuidTab = uuidTabs[index];
-						if (uuidTab.windowUUID === tab.windowUUID)
-						{
-							tab.id = uuidTab.id;
-							tab.windowId = uuidTab.windowId;
-						}
-
-					}
-				}
-				debug.trace("wtf", [...TABS.tabsData]);
-				debug.debug("settings sorting tabs", [...TABS.tabsData.values()].map(a =>
-				{
-					return {url: a.url, id: a.id, tabUUID: a.tabUUID, windowUUID: a.windowUUID, uuidList, a};
-				}));
-				for(let i = 0, length = savedTabsList.length; i < length; i++)
-				{
-					let tab = savedTabsList[i];
-					const savedTabData = uuidList.get(tab.tabUUID);
-					if (savedTabData)
-					{
-
-						// const tabOld = CLONE(tab);
-						const tabSaved = CLONE(savedTabData);
-						tab = TABS.updateData(savedTabData, tab, true);
-						// TABS.setUUID(tab);
-						// TABS.setWinUUID(tab);
-						TABS.add(tab, false);
-						if (tab.id !== tabSaved.id)
-							TABS.remove(tabSaved, false);
-
-						// debug.log(tabOld.tabUUID, tabOld.id, tab.id, {tabOld, tab: CLONE(tab), tabSaved});
-					}
-
-					// const opened = messengerHandler.onConnect.tab && messengerHandler.onConnect.tab.id === tab.id;
-					// setIcon(tab, opened);
-				}
-				const activeTabs = await _activeTabs;
-				for(let i = 0; i < activeTabs.length; i++)
-					TABS.add(activeTabs[i], false);
-
-				debug.debug("settings FINISHED	sorting tabs", [...TABS.tabsData.values()].map(a =>
-				{
-					return {url: a.url, id: a.id, tabUUID: a.tabUUID, windowUUID: a.windowUUID, a};
-				}));
-				TABS.save();
-				for (const tab of TABS.tabsData)
-					actionButton.setIcon(tab[1]);
-
-				resolve(settings);
-				const [tab] = await _currentTab;
-				return setContext(tab);
-			}).catch(error => debug.error("settingsInit", error));
-		}; //settingsInit();
-
-		STORAGE.get(null, settingsInit);
+		STORAGE.get(null, (options, type) => settingsInit(options, type, resolve));
 
 		// storage change listener
 		chrome.storage.onChanged.addListener( settingsOnChange );
@@ -358,7 +370,7 @@ const SETTINGS = (() =>
 	 * @returns {Object} - A read-only proxy object that retrieves the value of the specified key from the default settings object.
 	 */
 	const settingsGetData = key => new Proxy(settings, {
-		get: (target, name) => Reflect.get(target[name], key),
+		get: (target, name) => (console.log(name, target[name]), Reflect.get(target[name], key)),
 		set: () => true, //read-only
 	});
 

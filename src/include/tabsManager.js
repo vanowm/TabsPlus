@@ -1,12 +1,11 @@
 /**
  * TabsManager class for managing browser tabs.
 */
-// eslint-disable-next-line no-unused-vars
 class TabsManager
 {
 	/**
 	 * Constructs a new TabsManager object.
-	 * @param {Map} [data=new Map()] - A map to hold the tab data.
+	 * @param {Map} [data=new Map()] - A map to hold the tabs data.
 	 */
 	constructor (data = new Map())
 	{
@@ -14,6 +13,8 @@ class TabsManager
 		this.noChange = false;
 		this.listeners = new Map();
 		this.loaded = this.load();
+
+		// list of properties to copy from the TAB object
 		this.fields = {
 			skip: true,
 			id: false,
@@ -85,18 +86,19 @@ class TabsManager
 	 */
 	async save ()
 	{
-		const tabsList = [...this.tabsData.values()];
+		// const tabsList = [...this.tabsData.values()];
 		const id = this.getUUID(Date.now());
 		const tabsOrder = [];
-		for(let i = 0, length = tabsList.length; i < length; i++)
+		// for(let i = 0, length = tabsList.length; i < length; i++)
+		for(const tab of this.tabsData)
 		{
-			tabsOrder.push(tabsList[i].tabUUID);
+			tabsOrder.push(tab[1].tabUUID);
 		}
-		debug.trace("TABS.save", id, "" + [...this.tabsData.keys()], tabsList.map(a => CLONE(a)), CLONE(tabsOrder));
+		debug.trace("TABS.save", id, "" + [...this.tabsData.keys()], [...this.tabsData.values()].map(a => CLONE(a)), CLONE(tabsOrder));
 		try
 		{
-			const result = await chrome.storage.local.set({tabsList, tabsOrder});
-			debug.trace("save alarm", id, result, "" + [...this.tabsData.keys()], tabsList.map(a => CLONE(a)), CLONE(tabsOrder));
+			const result = await chrome.storage.local.set({tabsList: [...this.tabsData.values()], tabsOrder});
+			debug.trace("save alarm", id, result, "" + [...this.tabsData.keys()], [...this.tabsData.values()].map(a => CLONE(a)), CLONE(tabsOrder));
 			return result;
 		}
 		catch (error)
@@ -114,16 +116,17 @@ class TabsManager
 	 */
 	setWinUUID (tab, save = true)
 	{
-		const list = [...this.tabsData.values()];
+		// const list = [...this.tabsData.values()];
 		const uuidList = [];
 
-		for(let i = 0, length = list.length; i < length; i++)
+		// for(let i = 0, length = list.length; i < length; i++)
+		for(const tabData of this.tabsData)
 		{
-			const listTab = list[i];
-			if (listTab.windowId !== tab.windowId)
+			// const listTab = list[i];
+			if (tabData[1].windowId !== tab.windowId)
 				continue;
 
-			uuidList.push(listTab);
+			uuidList.push(tabData[1]);
 		}
 		let uuid = "";
 		uuidList.sort((a, b) => a.index - b.index);
@@ -332,11 +335,12 @@ class TabsManager
 	{
 		const winIds = (winId !== undefined && !(Array.isArray(winId))) ? [winId] : winId;
 		const r = {};
-		const tabs = [...this.tabsData.values()];
+		// const tabs = [...this.tabsData.values()];
 
-		for (let i = 0, length = tabs.length; i < length; i++)
+		// for (let i = 0, length = tabs.length; i < length; i++)
+		for( const tabData of this.tabsData)
 		{
-			const tab = CLONE(tabs[i]);
+			const tab = CLONE(tabData[1]);
 			const windowId = tab.windowId;
 
 			if (winId && !winIds.includes(windowId))
@@ -425,7 +429,7 @@ const tabsHandler = {
 		{
 			tab = TABS.add(tab);
 			debug.debug("activated", activeInfo.tabId, TABS.win(), tab);
-			// setContext(tab);
+			// CONTEXTMENU.setContext(tab);
 		});
 		//    }, settings.newTabActivate == 1 && settings.tabsScrollFix ? noChange ? 200 : 300 : 0, "onActivated");
 	}, //onActivated()
@@ -540,13 +544,15 @@ const tabsHandler = {
 			}
 			if (SETTINGS.newTabPageSkip && !isForeground)
 			{
-				for(let i = 0, list = [...TABS.tabsData.values()]; i < list.length; i++)
+				// for(let i = 0, list = [...TABS.tabsData.values()]; i < list.length; i++)
+				for(const tabData of TABS.tabsData)
 				{
-					if (list[i].id === tab.id)
+					const value = tabData[1];
+					if (value.id === tab.id)
 						continue;
 
-					TABS.tabsData.delete(list[i].id);
-					TABS.tabsData.set(list[i].id, list[i]);
+					TABS.tabsData.delete(value.id);
+					TABS.tabsData.set(value.id, value);
 				}
 			}
 
@@ -580,13 +586,7 @@ const tabsHandler = {
 
 			debug.debug("onRemoved currentTab", tabId, currentTab?.id, last, removeInfo, removedTab);
 
-			if (!currentTab) //last tab in window
-			{
-				TABS.noChange = false;
-				return;
-			}
-
-			if (last.id === tabs[0].id)
+			if (!currentTab /* last tab in window */ || last.id === tabs[0].id)
 			{
 				TABS.noChange = false;
 				return;
@@ -707,9 +707,10 @@ const tabsHandler = {
 			.then(tab =>
 			{
 				let removedTab;
-				const tabs = [...TABS.tabsData.values()];
-				for(const data of tabs)
+				// const tabs = [...TABS.tabsData.values()];
+				for(const tabsData of TABS.tabsData)
 				{
+					const data = tabsData[1];
 					if (data.id === removedTabId)
 					{
 						TABS.tabsData.delete(removedTabId);
@@ -760,7 +761,7 @@ const tabsHandler = {
 
 		if (tab.favIconUrl)
 		{
-			Favicons.add(tab.url, tab.favIconUrl, true);
+			FAVICONS.add(tab.url, tab.favIconUrl, true);
 		}
 	//   debug.debug("onUpdated", {tabId, changeInfoStatus: changeInfo.status, tabStatus: tab.status, changeInfo, tab: JSON.parse(JSON.stringify(tab)), tabStored: TABS.find(tabId)});
 	// //debug.debug("onUpdated", tabId, changeInfo, changeInfo.status === "loading", clone(tab));

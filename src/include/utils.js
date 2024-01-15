@@ -1,5 +1,24 @@
+/**
+ * The manifest object of the Chrome extension.
+ * @type {object}
+ */
 const APP = chrome.runtime.getManifest();
-const CLONE = object => Object.assign({}, object);
+
+/**
+ * Creates a shallow copy of an object.
+ *
+ * @param {Object} object - The object to be cloned.
+ * @returns {Object} - The cloned object.
+ */
+
+const CLONE = object => Object.assign(Array.isArray(object) ? [] : {}, object);
+/**
+ * Truncates a string to a specified length.
+ * If the string is longer than the specified length, it adds an ellipsis (...) in the middle.
+ * @param {string} string_ - The string to truncate.
+ * @param {number} [n=50] - The maximum length of the truncated string.
+ * @returns {string} The truncated string.
+ */
 const truncate = (string_, n = 50) =>
 {
 	string_ = "" + string_;
@@ -7,6 +26,13 @@ const truncate = (string_, n = 50) =>
 //  return (this.length > n) ? this.substr(0, n-1) + '…' : this.toString();
 };
 
+/**
+ * Pads a string with leading zeros.
+ *
+ * @param {string|number} s - The string or number to pad.
+ * @param {number} [n=2] - The desired length of the padded string.
+ * @returns {string} The padded string.
+ */
 const pad = (s, n = 2) => ("" + s).padStart(n, 0);
 
 const Void = () => {};
@@ -46,8 +72,77 @@ const compareVersions = ((prep, l, i, r) => (a, b) =>
 	.replace(/(?:\.0+)*(\.-\d+(?:\.\d+)?)\.*$/g, "$1")
 	.split("."));
 
+/**
+ * Centers a string within a specified limit by adding a filler character on both sides.
+ * @param {string} string - The string to be centered.
+ * @param {number} [limit=75] - The maximum length of the centered string.
+ * @param {string} [filler="-"] - The character used to fill the space on both sides of the string.
+ * @returns {string} The centered string.
+ */
 const centerString = (string, limit = 75, filler = "-") =>
 {
 	const padLength = ~~((limit - string.length) / 2);
 	return string.padStart(string.length + padLength, filler).padEnd(string.length + padLength * 2, filler);
+};
+
+/**
+ * Checks if the input is empty.
+ * @param {string|array|Object} input - The input to check.
+ * @returns {boolean} True if the input is empty, false otherwise.
+ */
+const isEmpty = input =>
+{
+	if (input === null || input === undefined)
+		return true;
+
+	if (typeof input === "string" || Array.isArray(input))
+		return input.length === 0;
+
+	if (typeof input === "object")
+	{
+		for (const key in input)
+		{
+			if (Object.prototype.hasOwnProperty.call(input, key))
+				return false;
+		}
+		return true;
+	}
+
+	return false;
+};
+
+/**
+ * Returns the stack trace.
+ *
+ * @param {string} txt - The message.
+ * @returns {string} - The stack trace.
+ */
+// eslint-disable-next-line unicorn/error-message, unicorn/new-for-builtins
+const trace = txt => Error(txt).stack.replace(/^\w+(?:: (.*))?\n.*\n.*/m, "$1");
+
+/**
+ * Internationalization utility for retrieving localized messages.
+ * @type {Function}
+ */
+const i18n = (() =>
+{
+	const cache = {};
+	return new Proxy(name => cache[name] || (cache[name] = chrome.i18n.getMessage(name)),
+		{
+			get: (target, name) => target(name),
+			set: () => true
+		});
+})();
+
+const getHostname = url =>
+{
+	try
+	{
+		return new URL(url).hostname;
+	}
+	catch
+	{
+		debug.error(url, trace());
+		return "";
+	}
 };

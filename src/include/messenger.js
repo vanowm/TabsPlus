@@ -1,58 +1,36 @@
 // eslint-disable-next-line no-unused-vars
-const messenger = (() =>
+const MESSENGER = (() =>
 {
-	const ports = new Map();
-	const onConnect = new Map();
-	const onDisconnect = new Map();
-	const onMessage = new Map();
+	const mTabs = new Map();
+	const mPorts = new Map();
+	const mOnConnect = new Map();
+	const mOnDisconnect = new Map();
+	const mOnMessage = new Map();
 
 	chrome.runtime.onConnect.addListener(port =>
 	{
 		if (port.sender.id !== chrome.runtime.id)
 			return;
 
-		for (const [callback] of onConnect)
-			callback(port);
+		for (const callback of mOnConnect)
+			callback[0](port);
 
-		ports.set(port, port);
+		mPorts.set(port, port);
 		port.onMessage.addListener((...args) =>
 		{
-			for (const [callback] of onMessage)
-				callback(...args);
+			for (const callback of mOnMessage)
+				callback[0](...args);
 		});
 		port.onDisconnect.addListener(p =>
 		{
-			for (const [callback] of onDisconnect)
-				callback(p);
+			for (const callback of mOnDisconnect)
+				callback[0](p);
 
-			ports.delete(p);
+			mPorts.delete(p);
 		});
 	});
 
-	return Object.assign(message =>
-	{
-		for (const [port] of ports)
-			port.postMessage(message);
-	},
-	{
-		onConnect: callback => onConnect.set(callback, callback),
-		onDisconnect: callback => onDisconnect.set(callback, callback),
-		onMessage: callback => onMessage.set(callback, callback),
-		offConnect: callback => onConnect.delete(callback),
-		offDisconnect: callback => onDisconnect.delete(callback),
-		offMessage: callback => onMessage.delete(callback)
-	});
-})();
-
-/**
- * Object representing the message handler for the service worker.
- * @type {Object}
- */
-const messagesHandler = {
-	_tabs: new Map(),
-	_ports: new Map(),
-
-	onMessage: (message, sender, _sendResponse) =>
+	const onMessage = (message, sender, _sendResponse) =>
 	{
 		const isPort = _sendResponse === undefined;
 		const port = sender;
@@ -71,8 +49,8 @@ const messagesHandler = {
 			case "tab": {
 				if (isPort)
 				{
-					messagesHandler._ports.set(port, message.data);
-					messagesHandler._tabs.set(message.data.id, message.data);
+					mPorts.set(port, message.data);
+					mTabs.set(message.data.id, message.data);
 					actionButton.setIcon(message.data);
 				}
 
@@ -103,20 +81,42 @@ const messagesHandler = {
 
 		}
 		return true;
-	}, //onMessage();
+	}; //onMessage();
 
-	onConnect: port =>
+	const onConnect = port =>
 	{
-		messagesHandler._ports.set(port, null);
+		mPorts.set(port, null);
 		debug.debug("onConnect", port);
-	},
+	};
 
-	onDisconnect: port =>
+	const onDisconnect = port =>
 	{
-		const tab = messagesHandler._ports.get(port);
-		messagesHandler._ports.delete(port);
-		messagesHandler._tabs.delete(tab.id);
+		const tab = mPorts.get(port);
+		mPorts.delete(port);
+		mTabs.delete(tab.id);
 		actionButton.setIcon(tab);
-	}
+	};
 
-};// messengerHandler
+	return Object.assign(message =>
+	{
+		for (const port of mPorts)
+			port[0].postMessage(message);
+	},
+	{
+		tabs: mTabs,
+		ports: mPorts,
+		handler:
+		{
+			onMessage,
+			onConnect,
+			onDisconnect,
+		},
+
+		onConnect: callback => mOnConnect.set(callback, callback),
+		onDisconnect: callback => mOnDisconnect.set(callback, callback),
+		onMessage: callback => mOnMessage.set(callback, callback),
+		offConnect: callback => mOnConnect.delete(callback),
+		offDisconnect: callback => mOnDisconnect.delete(callback),
+		offMessage: callback => mOnMessage.delete(callback),
+	});
+})();
