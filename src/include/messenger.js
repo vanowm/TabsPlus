@@ -79,6 +79,9 @@ const MESSENGER = (() =>
 				break;
 			}
 
+			case "newWindow": {
+				TABS.nextAction("onCreate", "newWindow", message.data);
+			}
 		}
 		return true;
 	}; //onMessage();

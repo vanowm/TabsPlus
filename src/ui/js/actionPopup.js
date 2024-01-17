@@ -17,44 +17,49 @@ template({app:APP});
 
 chrome.sessions.onChanged.addListener(() => setTimeout(init, 100));
 
-const messenger = reconnected =>
+let messenger;
+(() =>
 {
-	const tab = chrome.tabs.query({ active: true, currentWindow: true }).then(tabs => tabs[0]);
-	debug.debug("popup messenger");
-	const port = chrome.runtime.connect(null, { name: "actionPopup" });
-	port.onMessage.addListener(message =>
+	const Messenger = reconnected =>
 	{
-		debug.debug("popup onMessage", message);
-		switch (message.type)
+		const tab = chrome.tabs.query({ active: true, currentWindow: true }).then(tabs => tabs[0]);
+		debug.debug("popup messenger");
+		const port = chrome.runtime.connect(null, { name: "actionPopup" });
+		port.onMessage.addListener(message =>
 		{
-			case "settings": /* this start init */
+			debug.debug("popup onMessage", message);
+			switch (message.type)
 			{
-				for (const i in message.data)
-					settings[i] = message.data[i];
+				case "settings": /* this start init */
+				{
+					for (const i in message.data)
+						settings[i] = message.data[i];
 
-				if (!reconnected)
-					init();
+					if (!reconnected)
+						init();
 
-				break;
-			}
-			case "settingChanged":
-			{
-				if (!settings[message.name] || settings[message.name].internal)
 					break;
+				}
+				case "settingChanged":
+				{
+					if (!settings[message.name] || settings[message.name].internal)
+						break;
 
-				settings[message.name].value = message.newValue;
-				init(message.name);
-				break;
+					settings[message.name].value = message.newValue;
+					init(message.name);
+					break;
+				}
 			}
-		}
-	});
-	port.onDisconnect.addListener(messenger); //this will allow us automatically reconnect
-	port.postMessage({ type: "settings" }); //get settings and start initialization
-	tab.then(_tab => port.postMessage({ type: "tab", data: _tab }))
-		.catch(error => debug.error("popup messenger", error));
-};
-
-messenger();
+		});
+		port.onDisconnect.addListener(Messenger); //this will allow us automatically reconnect
+		port.postMessage({ type: "settings" }); //get settings and start initialization
+		tab.then(_tab => port.postMessage({ type: "tab", data: _tab }))
+			.catch(error => debug.error("popup messenger", error));
+		messenger = (type, data) => port.postMessage({ type, data });
+		return messenger;
+	};
+	return Messenger();
+})();
 
 const aDates = [];
 
@@ -169,7 +174,9 @@ const getOption = ({ elContainer, sessions, windowIndex, index, indexLength}) =>
 			aDates.push(elDate);
 	}
 
-	elOption.addEventListener("click", onClick(elOption));
+	elOption.addEventListener("click", onClick(elOption, session));
+	elOption.addEventListener("auxclick", onClick(elOption, session));
+	elOption.addEventListener("mousedown", evt => evt.button === 1 && evt.preventDefault());
 	elOption.dataset.id = session.sessionId;
 	elContainer.append(elOption);
 	if (windowIndex)
@@ -180,18 +187,17 @@ const getOption = ({ elContainer, sessions, windowIndex, index, indexLength}) =>
 	return elOption;
 };
 
-const onClick = elOption => evt =>
+const onClick = (elOption, session) => evt =>
 {
-	if (contextMenuOption)
+	if (contextMenuOption || (evt.button && evt.button !== 1))
 		return;
-
 	contextMenuClose(evt);
 	evt.stopPropagation();
-	const id = elOption.dataset.id;
+	const sessionId = session.sessionId;
 	if (evt.target.classList.contains("sub"))
 	{
 		const isOpen = !elOption.classList.contains("open");
-		openWindows[id] = isOpen;
+		openWindows[sessionId] = isOpen;
 		if (evt.ctrlKey)
 		{
 			const nlMenus = elOption.parentNode.querySelectorAll(".menu");
@@ -205,9 +211,13 @@ const onClick = elOption => evt =>
 		return elOption.classList.toggle("open", isOpen);
 	}
 
-	debug.debug("restore", id);
-	chrome.sessions.restore(id);
+	debug.debug("restore", sessionId, session);
+	if (evt.button === 1 || evt.ctrlKey)
+		messenger("newWindow", session);
+
+	chrome.sessions.restore(sessionId);
 	window.close();
+
 };
 
 const faviconURL = u =>
@@ -317,7 +327,7 @@ const init = setting =>
 	const elContextMenu = document.getElementById("contextMenu");
 	const normalizePosition = (mouseX, mouseY) =>
 	{
-		const scope = elMenu;
+		const scope = document.body;//elMenu;
 		// ? compute what is the mouse position relative to the container element (scope)
 		const {
 			left: scopeOffsetX,
@@ -375,7 +385,7 @@ const init = setting =>
 
 		debug.debug(contextMenuOption);
 		debug.debug(evt.target.getBoundingClientRect());
-		document.body.setAttribute("contextMenu", contextMenuOption.dataset.sessionId);
+		document.body.setAttribute("contextmenu", contextMenuOption.dataset.id);
 		const pos = normalizePosition(evt.clientX, evt.clientY);
 		elContextMenu.style.left = pos.x + "px";
 		elContextMenu.style.top = pos.y + "px";

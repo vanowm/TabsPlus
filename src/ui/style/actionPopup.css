@@ -101,6 +101,11 @@ body[contextMenu] .option
 	cursor: not-allowed;
 }
 
+body[contextMenu]
+{
+	min-height: 9em; /* enough to display context menu */
+}
+
 /* stylelint-disable-next-line no-descending-specificity */
 .tabs > .option,
 :not(.tabs) > .option:not(:first-of-type)

@@ -31,8 +31,15 @@ class TabsManager
 			favIconUrl: true,
 			pinned: true,
 		};
+		for(const i in this.tabsHandler)
+			chrome.tabs[i]?.addListener(this.onWrapper(this.tabsHandler[i]));
+
 	}
 
+	onWrapper (callback)
+	{
+		return (...args) => SETTINGS.$inited.then(() => callback.apply(callback, args));
+	}
 	/**
 	 * Adds a tab to the manager.
 	 * @param {Object} tab - The tab to add.
@@ -94,7 +101,7 @@ class TabsManager
 		{
 			tabsOrder.push(tab[1].tabUUID);
 		}
-		debug.trace("TABS.save", id, "" + [...this.tabsData.keys()], [...this.tabsData.values()].map(a => CLONE(a)), CLONE(tabsOrder));
+		debug.trace("this.save", id, "" + [...this.tabsData.keys()], [...this.tabsData.values()].map(a => CLONE(a)), CLONE(tabsOrder));
 		try
 		{
 			const result = await chrome.storage.local.set({tabsList: [...this.tabsData.values()], tabsOrder});
@@ -103,7 +110,7 @@ class TabsManager
 		}
 		catch (error)
 		{
-			debug.error("TABS.save", error);
+			debug.error("this.save", error);
 			throw error;
 		}
 	}
@@ -165,7 +172,7 @@ class TabsManager
 		if (save)
 			tab.tabUUID = uuid;
 
-		debug.trace("TABS.setUUID", {tabOrig, tab, tabNew: CLONE(tab), save, uuid});
+		debug.trace("this.setUUID", {tabOrig, tab, tabNew: CLONE(tab), save, uuid});
 		return uuid;
 	}
 
@@ -249,7 +256,7 @@ class TabsManager
 	 */
 	async updateAll (windowId, save = true)
 	{
-		debug.debug("TABS.updateAll", windowId);
+		debug.debug("this.updateAll", windowId);
 		const query = {};
 		if (windowId)
 			query.windowId = windowId;
@@ -279,7 +286,7 @@ class TabsManager
 	{
 		skipIds = skipIds || [];
 		const list = [...this.tabsData.values()];
-		debug.trace("TABS.last", windowId, skip, skipIds, list);
+		debug.trace("this.last", windowId, skip, skipIds, list);
 		for(let i = list.length - 1; i > -1; i--)
 		{
 			const tab = list[i];
@@ -305,7 +312,7 @@ class TabsManager
 		}
 		catch (error)
 		{
-			debug.error("TABS.activate", error);
+			debug.error("this.activate", error);
 		}
 	}
 
@@ -322,7 +329,7 @@ class TabsManager
 		}
 		catch (error)
 		{
-			debug.error("TABS.deactivate", error);
+			debug.error("this.deactivate", error);
 		}
 	}
 
@@ -399,438 +406,469 @@ class TabsManager
 		for(let i = 0, listeners = [...list.keys()], length = listeners.length; i < length; i++)
 			listeners[i](...args);
 	}
-} // class TabsList
 
-// const onRemoveTab = {};
-/**
- * Event handler functions for various tab-related events.
- * @type {Object}
- */
-const tabsHandler = {
-	_lastActions: new Map(),
-	onActivated: activeInfo =>
+	nextActionMap = {};
+
+	nextAction = new Proxy((event, command, data) =>
 	{
-		// if (onRemoveTab.unload && onRemoveTab.unload !== activeInfo.tabId)
-		// {
-		// 	onRemoveTab.noUnload = true;
-		// 	chrome.tabs.discard(onRemoveTab.unload);
-		// 	delete onRemoveTab.unload;
-		// }
-		const noChange = TABS.noChange;
-		debug.trace("onActivated", activeInfo.tabId, {activeInfo, noChange, "TABS.noChange": TABS.noChange, "settings.tabsScrollFix": SETTINGS.tabsScrollFix});
-		// setAlarm(() =>
-		// {
-		debug.debug("onActivated onAlarm", {activeInfo, noChange, "TABS.noChange": TABS.noChange});
-		if (noChange)
-			return noChange instanceof Function && noChange();
+		if (!command)
+			return this.nextActionMap[event];
 
-		TABS.notifyListeners("activated", activeInfo);
-		tabsGet(activeInfo.tabId, tab =>
-		{
-			tab = TABS.add(tab);
-			debug.debug("activated", activeInfo.tabId, TABS.win(), tab);
-			// CONTEXTMENU.setContext(tab);
-		});
-		//    }, settings.newTabActivate == 1 && settings.tabsScrollFix ? noChange ? 200 : 300 : 0, "onActivated");
-	}, //onActivated()
+		if (!this.nextActionMap[event])
+			this.nextActionMap[event] = {};
 
-	onCreated: async tab =>
+		this.nextActionMap[event][command] = data;
+		return false;
+	},
 	{
-		const isRestored = (tab.pendingUrl && tab.pendingUrl === tab.url)
-							|| (!tab.pendingUrl && tab.status === "unloaded");
+		get: (target, event) => target(event),
+		set: (target, event, value) => target(event, value),
+	});
 
-		debug.debug("onCreated", isRestored, CLONE(tab));
-		//  TABS.add({id: tabId, windowId: attachInfo.newWindowId});
-		if (isRestored) //tab restored?
-			return;
-
-		let previousTab = TABS.last(tab.windowId);
-		TABS.add(tab);
-		if (!previousTab)
-			previousTab = tab;
-
-		const url = tab.url || tab.pendingUrl || "";
-		const match = url.match(/^(chrome|edge):\/\/(newtab)?/i) || [];
-		const isOptions = new RegExp("^chrome-extension://" + chrome.runtime.id + "/.*", "i").exec(url);
-		const isChrome = match[1];
-		const isNewPage = match[2];
-		const isForeground = (SETTINGS.newTabActivate === 1 && (!SETTINGS.newTabPageOnly || (SETTINGS.newTabPageOnly && isNewPage))) || isOptions;
-		const isBackground = SETTINGS.newTabActivate === 2 && !isOptions;
-
-		if (previousTab.id !== tab.id)
+	/**
+	 * Event handler functions for various tab-related events.
+	 * @type {Object}
+	 */
+	tabsHandler = {
+		onActivated: activeInfo =>
 		{
+			// if (onRemoveTab.unload && onRemoveTab.unload !== activeInfo.tabId)
+			// {
+			// 	onRemoveTab.noUnload = true;
+			// 	chrome.tabs.discard(onRemoveTab.unload);
+			// 	delete onRemoveTab.unload;
+			// }
+			const noChange = this.noChange;
+			debug.trace("onActivated", activeInfo.tabId, {activeInfo, noChange, "this.noChange": this.noChange, "settings.tabsScrollFix": SETTINGS.tabsScrollFix});
+			// setAlarm(() =>
+			// {
+			debug.debug("onActivated onAlarm", {activeInfo, noChange, "this.noChange": this.noChange});
+			if (noChange)
+				return noChange instanceof Function && noChange();
 
-			let index = tab.index;
+			this.notifyListeners("activated", activeInfo);
+			this.tabsGet(activeInfo.tabId, tab =>
+			{
+				tab = this.add(tab);
+				debug.debug("activated", activeInfo.tabId, this.win(), tab);
+				// CONTEXTMENU.setContext(tab);
+			});
+			//    }, settings.newTabActivate == 1 && settings.tabsScrollFix ? noChange ? 200 : 300 : 0, "onActivated");
+		}, //onActivated()
 
-			const first = await chrome.tabs.query({pinned: true, currentWindow: true});
-			const last = await chrome.tabs.query({currentWindow: true});
+		onCreated: async tab =>
+		{
+			const isRestored = (tab.pendingUrl && tab.pendingUrl === tab.url)
+								|| (!tab.pendingUrl && tab.status === "unloaded");
 
-			try
+			const isNewWindow = this.nextAction?.onCreate?.newWindow;
+			debug.debug("onCreated", isRestored, {tab: CLONE(tab), isNewWindow});
+			delete this.nextAction?.onCreate?.newWindow;
+			console.log(this.nextActionMap);
+			if (isRestored || isNewWindow) //tab restored?
 			{
-				previousTab = await chrome.tabs.get(previousTab.id);
-			}
-			catch(error)
-			{
-				debug.error("onCreated tabs.get", previousTab.id, error);
-			}
-			switch(SETTINGS.newTabPosition)
-			{
-				case 1: { //first
-					index = first.length;
-					break;
-				}
-				case 2: { //next left
-					index = Math.max(first.length, previousTab.index);
-					break;
-				}
-				case 3: { //next right
-					index = Math.min(previousTab.index + 1, last.length - 1);
-					break;
-				}
-				case 4: { //last
-					index = last.length - 1;
-					break;
-				}
-			}
-			// eslint-disable-next-line unicorn/no-await-expression-member
-			debug.debug("onCreated position", {settingNewTabPosition: SETTINGS.newTabPosition, tabIndex: tab.index, prevTabIndex: previousTab.index,index, first: (await first).length, last: (await last).length - 1, prevTabId: previousTab.id, tabId: tab.id, prevTab: previousTab, tab});
-
-			// without setTimeout it scrolls page down when link opens a new tab (and AutoControl installed https://chrome.google.com/webstore/detail/autocontrol-custom-shortc/lkaihdpfpifdlgoapbfocpmekbokmcfd )
-			// looks like it's fixed now
-			// setTimeout(() => {
-			if (isForeground || isBackground)
-			{
-				await new Promise(resolve =>
+				if (isNewWindow)
 				{
-					if (!SETTINGS.newTabPosition || tab.index === index)
-						return resolve();
+					const data = {
+						tabId: tab.id
+					};
+					// if (SETTINGS.newTabActivate)
+					// 	data.focused = SETTINGS.newTabActivate === 1;
 
-					chrome.tabs.move(tab.id, {index})
-						.then(result =>
+					chrome.tabs.query({windowId: tab.windowId}, tabs => tabs.length > 1 && chrome.windows.create(data));
+				}
+				else
+					return;
+			}
+			let previousTab = this.last(tab.windowId);
+			this.add(tab);
+			if (!previousTab)
+				previousTab = tab;
+
+			const url = tab.url || tab.pendingUrl || "";
+			const match = url.match(/^(chrome|edge):\/\/(newtab)?/i) || [];
+			const isOptions = new RegExp("^chrome-extension://" + chrome.runtime.id + "/.*", "i").exec(url);
+			const isChrome = match[1];
+			const isNewPage = match[2];
+			const isForeground = (SETTINGS.newTabActivate === 1 && (!SETTINGS.newTabPageOnly || (SETTINGS.newTabPageOnly && isNewPage))) || isOptions;
+			const isBackground = SETTINGS.newTabActivate === 2 && !isOptions;
+
+			if (previousTab.id !== tab.id)
+			{
+
+				let index = tab.index;
+
+				const first = await chrome.tabs.query({pinned: true, currentWindow: true});
+				const last = await chrome.tabs.query({currentWindow: true});
+
+				try
+				{
+					previousTab = await chrome.tabs.get(previousTab.id);
+				}
+				catch(error)
+				{
+					debug.error("onCreated tabs.get", previousTab.id, error);
+				}
+				switch(SETTINGS.newTabPosition)
+				{
+					case 1: { //first
+						index = first.length;
+						break;
+					}
+					case 2: { //next left
+						index = Math.max(first.length, previousTab.index);
+						break;
+					}
+					case 3: { //next right
+						index = Math.min(previousTab.index + 1, last.length - 1);
+						break;
+					}
+					case 4: { //last
+						index = last.length - 1;
+						break;
+					}
+				}
+				// eslint-disable-next-line unicorn/no-await-expression-member
+				debug.debug("onCreated position", {settingNewTabPosition: SETTINGS.newTabPosition, tabIndex: tab.index, prevTabIndex: previousTab.index,index, first: (await first).length, last: (await last).length - 1, prevTabId: previousTab.id, tabId: tab.id, prevTab: previousTab, tab});
+
+				// without setTimeout it scrolls page down when link opens a new tab (and AutoControl installed https://chrome.google.com/webstore/detail/autocontrol-custom-shortc/lkaihdpfpifdlgoapbfocpmekbokmcfd )
+				// looks like it's fixed now
+				// setTimeout(() => {
+				if (isForeground || isBackground)
+				{
+					await new Promise(resolve =>
+					{
+						if (!SETTINGS.newTabPosition || tab.index === index)
+							return resolve();
+
+						chrome.tabs.move(tab.id, {index})
+							.then(result =>
+							{
+								resolve(true);
+								return result;
+							})
+							.catch(error => (resolve(), debug.error("onCreated.move", error)));
+					});
+
+					const wait = new Promise(resolve => (this.noChange = resolve));
+					debug.debug("noChange", "true", {noChange: this.noChange, prevTabId: previousTab.id, tabId: tab.id, prevTab: previousTab, tab});
+					this.activate(previousTab.id);
+					if (previousTab.active)
+						this.noChange();
+
+					await wait;
+					this.noChange = false;
+				}
+			}
+			// }, 35);
+
+			// fix for EDGE vertical tabs don't scroll to the new tab
+			// https://github.com/MicrosoftDocs/edge-developer/issues/1276
+			// https://github.com/microsoft/MicrosoftEdge-Extensions/discussions/125
+			setAlarm(() =>
+			{
+
+				debug.debug("noChange", "false", {noChange: this.noChange, isChrome, isNewPage, isForeground, isBackground, newTabPageOnly: SETTINGS.newTabPageOnly, tab});
+				if (isForeground || isBackground)
+				{
+					// //move new tab to the front of the list
+					// const t = this.tabsData.get(tab.id);
+					// this.tabsData.delete(tab.id);
+					// this.tabsData.set(tab.id, t);
+
+					//remove this block to skip to new tab when delete
+				}
+				if (SETTINGS.newTabPageSkip && !isForeground)
+				{
+					// for(let i = 0, list = [...this.tabsData.values()]; i < list.length; i++)
+					for(const tabData of this.tabsData)
+					{
+						const value = tabData[1];
+						if (value.id === tab.id)
+							continue;
+
+						this.tabsData.delete(value.id);
+						this.tabsData.set(value.id, value);
+					}
+				}
+
+				//move previous tab to the end
+				if (isForeground)
+					this.activate(tab.id); // foreground
+				else if (isBackground)
+				{
+					this.tabsData.delete(previousTab.id);
+					this.tabsData.set(previousTab.id, previousTab);
+					this.activate(previousTab.id); // background
+
+				}
+
+				actionButton.setIcon(tab);
+				this.updateAll(tab.windowId);
+			}, SETTINGS.tabsScrollFix * 50, "onCreated");
+
+			debug.debug("created", this.win(tab.windowId), previousTab, tab);
+		}, //onCreated()
+
+		onRemoved: (tabId, removeInfo) =>
+		{
+			debug.debug("onRemoved", {tabId, removeInfo});
+			this.noChange = true;
+			this.tabsQuery({active: true, windowId: removeInfo.windowId}, tabs =>
+			{
+				const removedTab = this.remove({id: tabId, windowId: removeInfo.windowId});
+				const currentTab = tabs[0];
+				const last = this.last(removeInfo.windowId, true);
+
+				debug.debug("onRemoved currentTab", tabId, currentTab?.id, last, removeInfo, removedTab);
+
+				if (!currentTab /* last tab in window */ || last.id === tabs[0].id)
+				{
+					this.noChange = false;
+					return;
+				}
+
+				this.noChange = true;
+				const windowId = removedTab.windowId;
+
+				let index = removedTab.index;
+				let previousTab = this.last(windowId, true);
+
+				debug.debug("remove", tabId, "prev", previousTab?.id, "cur", currentTab.id, previousTab && (previousTab.id !== tabId && currentTab.id === previousTab.id));
+				//  if ((prevTab && prevTab.id != tabId) || !settings.afterClose)
+				if (!SETTINGS.afterClose || (SETTINGS.afterClose === 1 && previousTab?.id !== tabId && currentTab.id === previousTab?.id))
+				{
+					this.noChange = false;
+					return debug.debug("noChange", "exit remove", this.noChange);
+				}
+
+				previousTab = this.last(windowId, true);
+				if (!previousTab)
+					previousTab = this.last(windowId);
+
+				if (!previousTab)
+					return;
+
+				debug.debug("removing", tabId, previousTab.id, currentTab.id, "removed ind ", index, "cur ind", currentTab.index);
+				const result = _tabs =>
+				{
+					this.noChange = false;
+					this.activate(_tabs[0].id)
+						.catch(error => debug.error("onRemoved callback", error));
+				};
+
+				if (SETTINGS.afterClose === 1)
+				{
+					chrome.tabs.get(previousTab.id)
+						.then(tab => result([tab]))
+						.catch(error => debug.error("onRemoved afterClose", error)); //previous active
+				}
+				else
+				{
+					chrome.tabs.query({
+						index: [
+							index && --index || 0, // left
+							index // right
+						][SETTINGS.afterClose - 2],
+						windowId: windowId
+					})
+						.then(result)
+						.catch(error => debug.error("onRemoved query", error));
+					debug.debug([
+						(index && --index) || 0, // left
+						index // right
+					][SETTINGS.afterClose - 2], SETTINGS.afterClose - 2, (index && --index) || 0, index);
+				}
+				/*
+		switch (settings.afterClose)
+		{
+			case 1: // last used tab
+			chrome.tabs.update(tabsArray[0], {active: true});
+			break;
+			case 2: // left
+			chrome.tabs.query({windowId: currentWindowId}, tabs =>
+			{
+				if (currentTabIndex > 0)
+				currentTabIndex = currentTabIndex - 1;
+
+				chrome.tabs.update(tabs[currentTabIndex].id, {active: true});
+			});
+			break;
+			case 3: // right
+			chrome.tabs.query({windowId: currentWindowId}, tabs =>
+			{
+				if (currentTabIndex >= this.length)
+				currentTabIndex = this.length - 1;
+
+				chrome.tabs.update(tabs[currentTabIndex].id, {active: true});
+			});
+			break;
+			}
+		*/
+				this.updateAll(windowId);
+				debug.debug("remove win", this.win(windowId));
+			});
+		}, //onRemoved()
+
+		onAttached: (tabId, attachInfo) =>
+		{
+			debug.debug("onAttached", {tabId, attachInfo, data: CLONE(this.find({id: tabId, windowId: attachInfo.newWindowId}) || {})});
+			this.updateAll(attachInfo.windowId);
+			// this.updateData(this.find({id: tabId, windowId: attachInfo.newWindowId}), {id: tabId, windowId: attachInfo.newWindowId}, true);
+			// this.save();
+			debug.debug("onAttached after", CLONE(this.find({id: tabId, windowId: attachInfo.newWindowId}) || {}));
+		}, //onAttached()
+
+		onDetached: (tabId, detachInfo) =>
+		{
+			debug.debug("onDetached", {tabId, detachInfo, data: CLONE(this.find({id: tabId, windowId: detachInfo.oldWindowId}) || {})});
+			this.updateAll(detachInfo.windowId);
+			// this.updateData(this.find({id: tabId, windowId: detachInfo.oldWindowId}), {id: tabId, windowId: detachInfo.oldWindowId}, true);
+			// this.save();
+			debug.debug("onDetached after", CLONE(this.find({id: tabId, windowId: detachInfo.oldWindowId}) || {}));
+		}, //onDetached()
+
+		// onMoved: (tabId, moveInfo) =>
+		// {
+		// debug.debug("moved", tabId, moveInfo, clone(this.find(tabId)));
+		//   this.updateData({id: tabId, windowId: moveInfo.windowId, index: moveInfo.toIndex});
+		// debug.debug("moved end", this.find(tabId));
+		// }, //onMoved()
+
+		_onReplacedCallback: [],
+		onReplaced: (addedTabId, removedTabId) =>
+		{
+			debug.debug("onReplaced", {addedTabId, removedTabId});
+			chrome.tabs.get(addedTabId)
+				.then(tab =>
+				{
+					let removedTab;
+					// const tabs = [...this.tabsData.values()];
+					for(const tabsData of this.tabsData)
+					{
+						const data = tabsData[1];
+						if (data.id === removedTabId)
 						{
-							resolve(true);
-							return result;
-						})
-						.catch(error => (resolve(), debug.error("onCreated.move", error)));
-				});
+							this.tabsData.delete(removedTabId);
+							removedTab = data;
+							data.id = tab.id;
+						}
+						this.tabsData.delete(data.id);
+						this.tabsData.set(data.id, data);
+					}
+					this.updateData(tab, removedTab);
+					this.add(tab, false, false);
+					const callback = tabsHandler._onReplacedCallback;
+					while(callback.length > 0)
+						callback.shift()({tab, oldTab: removedTab || this.find({id: removedTabId})});
 
-				const wait = new Promise(resolve => (TABS.noChange = resolve));
-				debug.debug("noChange", "true", {noChange: TABS.noChange, prevTabId: previousTab.id, tabId: tab.id, prevTab: previousTab, tab});
-				TABS.activate(previousTab.id);
-				if (previousTab.active)
-					TABS.noChange();
+					return tab;
+				})
+				.catch(error => debug.error("onReplaced", error));
+		}, //onReplaced()
 
-				await wait;
-				TABS.noChange = false;
-			}
-		}
-		// }, 35);
-
-		// fix for EDGE vertical tabs don't scroll to the new tab
-		// https://github.com/MicrosoftDocs/edge-developer/issues/1276
-		// https://github.com/microsoft/MicrosoftEdge-Extensions/discussions/125
-		setAlarm(() =>
+		onUpdated: (tabId, changeInfo, origTab) =>
 		{
-
-			debug.debug("noChange", "false", {noChange: TABS.noChange, isChrome, isNewPage, isForeground, isBackground, newTabPageOnly: SETTINGS.newTabPageOnly, tab});
-			if (isForeground || isBackground)
+			const origTabClone = CLONE(origTab);
+			let tab = this.find(origTab);
+			if (tab)
 			{
-				// //move new tab to the front of the list
-				// const t = TABS.tabsData.get(tab.id);
-				// TABS.tabsData.delete(tab.id);
-				// TABS.tabsData.set(tab.id, t);
+				const tabUUID = tab.tabUUID;
+				const windowUUID = tab.windowUUID;
 
-				//remove this block to skip to new tab when delete
+				tab = this.updateData(tab, origTab);
+				this.setUUID(tab);
+				this.setWinUUID(tab);
+				if (tabUUID !== tab.tabUUID || windowUUID !== tab.windowUUID)
+					this.save();
 			}
-			if (SETTINGS.newTabPageSkip && !isForeground)
+			else
+				tab = origTab;
+
+			// if (changeInfo.discarded === false && !onRemoveTab.noUnload)
+			// 	onRemoveTab.unload = tabId;
+
+			// delete onRemoveTab.noUnload;
+			// debug.debug("onUpdated", tabId, {onRemoveTab: CLONE(onRemoveTab), changeInfo, changeInfoCloned: CLONE(changeInfo), tab: CLONE(tab), origTabClone});
+			if (changeInfo.status === "loading")
 			{
-				// for(let i = 0, list = [...TABS.tabsData.values()]; i < list.length; i++)
-				for(const tabData of TABS.tabsData)
+				actionButton.setIcon(tab);
+			}
+
+		//   debug.debug("onUpdated", {tabId, changeInfoStatus: changeInfo.status, tabStatus: tab.status, changeInfo, tab: JSON.parse(JSON.stringify(tab)), tabStored: this.find(tabId)});
+		// //debug.debug("onUpdated", tabId, changeInfo, changeInfo.status === "loading", clone(tab));
+		//   this.updateData(Object.assign(changeInfo, {id: tabId, windowId: tab.windowId}));
+		// debug.debug("onUpdated end", this.find(tabId,tab.windowId));
+		}, //onUpdated()
+
+		onMoved: (tabId, changeInfo, tab) =>
+		{
+			tab = tab || {id: tabId, windowId: changeInfo.windowId, index: changeInfo.toIndex};
+			debug.debug("onMoved", {tabId, changeInfo, tab: CLONE(tab), found: CLONE(this.find(tab))});
+			this.updateAll(changeInfo.windowId);
+		},
+
+	};//tabsEventHandler
+
+	/**
+	 * Retrieves information about a tab with the given ID.
+	 * @param {number} id - The ID of the tab to retrieve information for.
+	 * @param {function} callback - The callback function to be called with the tab information.
+	 * @see: https://stackoverflow.com/questions/67887896
+	 */
+	tabsGet (id, callback)
+	{
+		const callback_ = tabs => (chrome.runtime.lastError ? setTimeout(() => chrome.tabs.get(id, callback_)) : callback(tabs));
+		chrome.tabs.get(id)
+			.then(callback_)
+			.catch(error => debug.error("tabsGet", error));
+	}
+
+	/**
+	 * Queries the Chrome tabs based on the given query object and invokes the callback function with the result.
+	 *
+	 * @param {Object} query - The query object used to filter the tabs.
+	 * @param {Function} callback - The callback function to be invoked with the tabs result.
+	 * @returns {Promise} A promise that resolves with the tabs result.
+	 */
+	tabsQuery (query, callback)
+	{
+		const callback_ = tabs => ((chrome.runtime.lastError) ? setTimeout(() => chrome.tabs.query(query, callback_)) : callback(tabs)); //https://stackoverflow.com/questions/67887896
+		return chrome.tabs.query(query)
+			.then(callback_)
+			.catch(error => debug.error("tabsQuery", error));
+	}
+
+	/**
+	 * Unloads tabs by discarding them.
+	 * @param {Array} tabs - The array of tabs to unload.
+	 * @param {string} [type=ACTION_UNLOAD_TAB] - The type of action to perform on the tabs.
+	 */
+	unloadTabs (tabs, type = ACTION_UNLOAD_TAB)
+	{
+		for(let i = 0; i < tabs.length; i++)
+		{
+			const tab = tabs[i];
+			if (!tab.discarded)
+			{
+				const result = () => chrome.tabs.discard(tab.id).catch(error => debug.error("unloadTabs", error));
+				debug.debug("unloadTab", {id: tab.id, type, tab});
+				if (type === ACTION_UNLOAD_TAB || type === ACTION_UNLOAD_WINDOW)
 				{
-					const value = tabData[1];
-					if (value.id === tab.id)
+					const previousTab = this.last(tab.windowId, true, [tab.id]);
+					if (!previousTab)
 						continue;
 
-					TABS.tabsData.delete(value.id);
-					TABS.tabsData.set(value.id, value);
+					this.activate(previousTab.id)
+						.then(result)
+						.catch(error => debug.error("unloadTabs", error));
 				}
-			}
-
-			//move previous tab to the end
-			if (isForeground)
-				TABS.activate(tab.id); // foreground
-			else if (isBackground)
-			{
-				TABS.tabsData.delete(previousTab.id);
-				TABS.tabsData.set(previousTab.id, previousTab);
-				TABS.activate(previousTab.id); // background
-
-			}
-
-			actionButton.setIcon(tab);
-			TABS.updateAll(tab.windowId);
-		}, SETTINGS.tabsScrollFix * 50, "onCreated");
-
-		debug.debug("created", TABS.win(tab.windowId), previousTab, tab);
-	}, //onCreated()
-
-	onRemoved: (tabId, removeInfo) =>
-	{
-		debug.debug("onRemoved", {tabId, removeInfo});
-		TABS.noChange = true;
-		tabsQuery({active: true, windowId: removeInfo.windowId}, tabs =>
-		{
-			const removedTab = TABS.remove({id: tabId, windowId: removeInfo.windowId});
-			const currentTab = tabs[0];
-			const last = TABS.last(removeInfo.windowId, true);
-
-			debug.debug("onRemoved currentTab", tabId, currentTab?.id, last, removeInfo, removedTab);
-
-			if (!currentTab /* last tab in window */ || last.id === tabs[0].id)
-			{
-				TABS.noChange = false;
-				return;
-			}
-
-			TABS.noChange = true;
-			const windowId = removedTab.windowId;
-
-			let index = removedTab.index;
-			let previousTab = TABS.last(windowId, true);
-
-			debug.debug("remove", tabId, "prev", previousTab?.id, "cur", currentTab.id, previousTab && (previousTab.id !== tabId && currentTab.id === previousTab.id));
-			//  if ((prevTab && prevTab.id != tabId) || !settings.afterClose)
-			if (!SETTINGS.afterClose || (SETTINGS.afterClose === 1 && previousTab?.id !== tabId && currentTab.id === previousTab?.id))
-			{
-				TABS.noChange = false;
-				return debug.debug("noChange", "exit remove", TABS.noChange);
-			}
-
-			previousTab = TABS.last(windowId, true);
-			if (!previousTab)
-				previousTab = TABS.last(windowId);
-
-			if (!previousTab)
-				return;
-
-			debug.debug("removing", tabId, previousTab.id, currentTab.id, "removed ind ", index, "cur ind", currentTab.index);
-			const result = _tabs =>
-			{
-				TABS.noChange = false;
-				TABS.activate(_tabs[0].id)
-					.catch(error => debug.error("onRemoved callback", error));
-			};
-
-			if (SETTINGS.afterClose === 1)
-			{
-				chrome.tabs.get(previousTab.id)
-					.then(tab => result([tab]))
-					.catch(error => debug.error("onRemoved afterClose", error)); //previous active
-			}
-			else
-			{
-				chrome.tabs.query({
-					index: [
-						index && --index || 0, // left
-						index // right
-					][SETTINGS.afterClose - 2],
-					windowId: windowId
-				})
-					.then(result)
-					.catch(error => debug.error("onRemoved query", error));
-				debug.debug([
-					(index && --index) || 0, // left
-					index // right
-				][SETTINGS.afterClose - 2], SETTINGS.afterClose - 2, (index && --index) || 0, index);
-			}
-			/*
-	switch (settings.afterClose)
-	{
-		case 1: // last used tab
-		chrome.tabs.update(tabsArray[0], {active: true});
-		break;
-		case 2: // left
-		chrome.tabs.query({windowId: currentWindowId}, tabs =>
-		{
-			if (currentTabIndex > 0)
-			currentTabIndex = currentTabIndex - 1;
-
-			chrome.tabs.update(tabs[currentTabIndex].id, {active: true});
-		});
-		break;
-		case 3: // right
-		chrome.tabs.query({windowId: currentWindowId}, tabs =>
-		{
-			if (currentTabIndex >= TABS.length)
-			currentTabIndex = TABS.length - 1;
-
-			chrome.tabs.update(tabs[currentTabIndex].id, {active: true});
-		});
-		break;
-		}
-	*/
-			TABS.updateAll(windowId);
-			debug.debug("remove win", TABS.win(windowId));
-		});
-	}, //onRemoved()
-
-	onAttached: (tabId, attachInfo) =>
-	{
-		debug.debug("onAttached", {tabId, attachInfo, data: CLONE(TABS.find({id: tabId, windowId: attachInfo.newWindowId}) || {})});
-		TABS.updateAll(attachInfo.windowId);
-		// TABS.updateData(TABS.find({id: tabId, windowId: attachInfo.newWindowId}), {id: tabId, windowId: attachInfo.newWindowId}, true);
-		// TABS.save();
-		debug.debug("onAttached after", CLONE(TABS.find({id: tabId, windowId: attachInfo.newWindowId}) || {}));
-	}, //onAttached()
-
-	onDetached: (tabId, detachInfo) =>
-	{
-		debug.debug("onDetached", {tabId, detachInfo, data: CLONE(TABS.find({id: tabId, windowId: detachInfo.oldWindowId}) || {})});
-		TABS.updateAll(detachInfo.windowId);
-		// TABS.updateData(TABS.find({id: tabId, windowId: detachInfo.oldWindowId}), {id: tabId, windowId: detachInfo.oldWindowId}, true);
-		// TABS.save();
-		debug.debug("onDetached after", CLONE(TABS.find({id: tabId, windowId: detachInfo.oldWindowId}) || {}));
-	}, //onDetached()
-
-	// onMoved: (tabId, moveInfo) =>
-	// {
-	// debug.debug("moved", tabId, moveInfo, clone(TABS.find(tabId)));
-	//   TABS.updateData({id: tabId, windowId: moveInfo.windowId, index: moveInfo.toIndex});
-	// debug.debug("moved end", TABS.find(tabId));
-	// }, //onMoved()
-
-	_onReplacedCallback: [],
-	onReplaced: (addedTabId, removedTabId) =>
-	{
-		debug.debug("onReplaced", {addedTabId, removedTabId});
-		chrome.tabs.get(addedTabId)
-			.then(tab =>
-			{
-				let removedTab;
-				// const tabs = [...TABS.tabsData.values()];
-				for(const tabsData of TABS.tabsData)
+				else
 				{
-					const data = tabsData[1];
-					if (data.id === removedTabId)
-					{
-						TABS.tabsData.delete(removedTabId);
-						removedTab = data;
-						data.id = tab.id;
-					}
-					TABS.tabsData.delete(data.id);
-					TABS.tabsData.set(data.id, data);
+					result();
 				}
-				TABS.updateData(tab, removedTab);
-				TABS.add(tab, false, false);
-				const callback = tabsHandler._onReplacedCallback;
-				while(callback.length > 0)
-					callback.shift()({tab, oldTab: removedTab || TABS.find({id: removedTabId})});
-
-				return tab;
-			})
-			.catch(error => debug.error("onReplaced", error));
-	}, //onReplaced()
-
-	onUpdated: (tabId, changeInfo, origTab) =>
-	{
-		const origTabClone = CLONE(origTab);
-		let tab = TABS.find(origTab);
-		if (tab)
-		{
-			const tabUUID = tab.tabUUID;
-			const windowUUID = tab.windowUUID;
-
-			tab = TABS.updateData(tab, origTab);
-			TABS.setUUID(tab);
-			TABS.setWinUUID(tab);
-			if (tabUUID !== tab.tabUUID || windowUUID !== tab.windowUUID)
-				TABS.save();
-		}
-		else
-			tab = origTab;
-
-		// if (changeInfo.discarded === false && !onRemoveTab.noUnload)
-		// 	onRemoveTab.unload = tabId;
-
-		// delete onRemoveTab.noUnload;
-		// debug.debug("onUpdated", tabId, {onRemoveTab: CLONE(onRemoveTab), changeInfo, changeInfoCloned: CLONE(changeInfo), tab: CLONE(tab), origTabClone});
-		if (changeInfo.status === "loading")
-		{
-			actionButton.setIcon(tab);
-		}
-
-	//   debug.debug("onUpdated", {tabId, changeInfoStatus: changeInfo.status, tabStatus: tab.status, changeInfo, tab: JSON.parse(JSON.stringify(tab)), tabStored: TABS.find(tabId)});
-	// //debug.debug("onUpdated", tabId, changeInfo, changeInfo.status === "loading", clone(tab));
-	//   TABS.updateData(Object.assign(changeInfo, {id: tabId, windowId: tab.windowId}));
-	// debug.debug("onUpdated end", TABS.find(tabId,tab.windowId));
-	}, //onUpdated()
-
-	onMoved: (tabId, changeInfo, tab) =>
-	{
-		tab = tab || {id: tabId, windowId: changeInfo.windowId, index: changeInfo.toIndex};
-		debug.debug("onMoved", {tabId, changeInfo, tab: CLONE(tab), found: CLONE(TABS.find(tab))});
-		TABS.updateAll(changeInfo.windowId);
-	},
-
-};//tabsEventHandler
-
-/**
- * Retrieves information about a tab with the given ID.
- * @param {number} id - The ID of the tab to retrieve information for.
- * @param {function} callback - The callback function to be called with the tab information.
- * @see: https://stackoverflow.com/questions/67887896
- */
-const tabsGet = (id, callback) =>
-{
-	const callback_ = tabs => (chrome.runtime.lastError ? setTimeout(() => chrome.tabs.get(id, callback_)) : callback(tabs));
-	chrome.tabs.get(id)
-		.then(callback_)
-		.catch(error => debug.error("tabsGet", error));
-};
-
-/**
- * Queries the Chrome tabs based on the given query object and invokes the callback function with the result.
- *
- * @param {Object} query - The query object used to filter the tabs.
- * @param {Function} callback - The callback function to be invoked with the tabs result.
- * @returns {Promise} A promise that resolves with the tabs result.
- */
-const tabsQuery = (query, callback) =>
-{
-	const callback_ = tabs => ((chrome.runtime.lastError) ? setTimeout(() => chrome.tabs.query(query, callback_)) : callback(tabs)); //https://stackoverflow.com/questions/67887896
-	return chrome.tabs.query(query)
-		.then(callback_)
-		.catch(error => debug.error("tabsQuery", error));
-};
-
-/**
- * Unloads tabs by discarding them.
- * @param {Array} tabs - The array of tabs to unload.
- * @param {string} [type=ACTION_UNLOAD_TAB] - The type of action to perform on the tabs.
- */
-const unloadTabs = (tabs, type = ACTION_UNLOAD_TAB) =>
-{
-	for(let i = 0; i < tabs.length; i++)
-	{
-		const tab = tabs[i];
-		if (!tab.discarded)
-		{
-			const result = () => chrome.tabs.discard(tab.id).catch(error => debug.error("unloadTabs", error));
-			debug.debug("unloadTab", {id: tab.id, type, tab});
-			if (type === ACTION_UNLOAD_TAB || type === ACTION_UNLOAD_WINDOW)
-			{
-				const previousTab = TABS.last(tab.windowId, true, [tab.id]);
-				if (!previousTab)
-					continue;
-
-				TABS.activate(previousTab.id)
-					.then(result)
-					.catch(error => debug.error("unloadTabs", error));
-			}
-			else
-			{
-				result();
 			}
 		}
 	}
-};
+
+} // class TabsList

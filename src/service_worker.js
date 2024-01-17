@@ -25,9 +25,6 @@ chrome.runtime.sendMessage(null, "reconnect")?.catch(error => debug.debug("sendM
 for(const i in MESSENGER.handler)
 	MESSENGER[i]?.(MESSENGER.handler[i]);
 
-for(const i in tabsHandler)
-	chrome.tabs[i]?.addListener(onWrapper(tabsHandler[i]));
-
 chrome.runtime.onSuspend.addListener(() =>
 {
 	chrome.action.setBadgeBackgroundColor({color: "red"});

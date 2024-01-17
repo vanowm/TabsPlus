@@ -156,47 +156,6 @@ const SETTINGS = (() =>
 	const settingsInit = (options, type, resolve) =>
 	{
 		const save = {};
-		for (const i in settings)
-		{
-
-			const label = i18n(i);
-			const description = i18n(i + "_desc");
-			const valid = settings[i].valid || [];
-
-			if (label)
-				settings[i].label = label;
-
-			if (description)
-				settings[i].description = description;
-
-			if (valid.length === 0)
-			{
-				let n = 0;
-				let validValue;
-				do
-				{
-					validValue = i18n(i + "_" + n);
-					if (validValue)
-						valid[valid.length] = validValue;
-
-					n++;
-				}
-				while(validValue);
-			}
-			const map = settings[i].map;
-			for(let j = 0; j < valid.length; j++)
-			{
-				const name = i18n(i + "_" + j);
-				if (!name)
-					continue;
-
-				if (!settings[i].options)
-					settings[i].options = [];
-
-				const index = map ? map.indexOf(j) : j;
-				settings[i].options[index] = {id: j, name, description: i18n(i + "_" + j + "_desc")};
-			}
-		}
 		const remove = [];
 		for (const id in options)
 		{

@@ -71,26 +71,27 @@ const actionButton = (tab, iconAction) =>
 
 		case ACTION_UNLOAD_TAB: {
 			chrome.tabs.query({currentWindow: true, active: true})
-				.then(tabs => unloadTabs(tabs, ACTION_UNLOAD_TAB))
+				.then(tabs => TABS.unloadTabs(tabs, ACTION_UNLOAD_TAB))
 				.catch(error => debug.error("actionButton", ACTION_UNLOAD_TAB, error));
 			break;
 		}
 
 		case ACTION_UNLOAD_WINDOW: {
 			chrome.tabs.query({currentWindow: true, active: false})
-				.then(tabs => unloadTabs(tabs, ACTION_UNLOAD_WINDOW))
+				.then(tabs => TABS.unloadTabs(tabs, ACTION_UNLOAD_WINDOW))
 				.catch(error => debug.error("actionButton", ACTION_UNLOAD_WINDOW, error));
 			break;
 		}
 
 		case ACTION_UNLOAD_ALL: {
 			chrome.tabs.query({active: false})
-				.then(tabs => unloadTabs(tabs, ACTION_UNLOAD_ALL))
+				.then(tabs => TABS.unloadTabs(tabs, ACTION_UNLOAD_ALL))
 				.catch(error => debug.error("actionButton", ACTION_UNLOAD_ALL, error));
 			break;
 		}
 	}//switch
 };
+
 	/**
 	 * Sets the icon, badge, title, and popup for a given tab.
 	 *
@@ -100,7 +101,7 @@ const actionButton = (tab, iconAction) =>
 actionButton.setIcon = tab =>
 {
 	if (!tab)
-		return debug.trace("setIcon error tab", tab);
+		return debug.trace("actionButtonSetIcon error tab", tab);
 
 	let title = APP.name;
 	let popup = "";
@@ -121,7 +122,7 @@ actionButton.setIcon = tab =>
 		badge = badge + "" + i18n("iconAction_" + SETTINGS.iconAction + "_badge").padStart(2, " ");
 	}
 
-	debug.trace("setIcon", {id: tab.id, badge, iconAction: SETTINGS.iconAction, prop: property, open, tab, skipped, tabConnect: MESSENGER.tabs});
+	debug.trace("actionButtonSetIcon", {id: tab.id, badge, iconAction: SETTINGS.iconAction, prop: property, open, tab, skipped, tabConnect: MESSENGER.tabs});
 	if (badge.length < 3)
 		badge = "  " + badge + "  ";
 
@@ -140,6 +141,5 @@ actionButton.setIcon = tab =>
 	chrome.action.setBadgeText({text: badge, tabId: tab.id}).catch(Void);
 	chrome.action.setPopup({tabId: tab.id, popup: popup}).catch(Void);
 	chrome.action.setTitle({tabId: tab.id, title: title}).catch(Void);
-	debug.debug({action, title, badge, popup});
-
+	debug.trace("actionButtonSetIcon", {action, title, badge, popup});
 };
